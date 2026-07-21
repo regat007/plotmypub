@@ -1,0 +1,395 @@
+/**
+ * Pub Ratings — map backend (multi-author)
+ * ------------------------------------------------------------------
+ * Sheet 'Pub Ratings' (row 1 = headers):
+ *   A Pub | B Area | C Author | D Location | E Beer Selection | F Value
+ *   G Facilities | H Vibe | I Total /25 | J Score /10 | K Rank
+ *   L Lat | M Lng | N Place ID
+ *
+ * One row per AUTHOR + PUB. Two people rating the same pub = two rows.
+ * The map groups them: a pin shows the average, the author dropdown
+ * filters to one person's view.
+ *
+ * Sheet 'Users':   A Name | B First seen | C Pubs rated
+ * Sheet 'Summary': stats over the full range
+ *
+ * Setup:
+ *   1. Script Properties: MAPS_API_KEY = <your key>.
+ *   2. Run migrateSheet() once (from Migrate.gs).
+ *   3. Deploy > Manage deployments > New version.
+ */
+
+const SHEET_NAME = 'Pub Ratings';
+const USERS_SHEET = 'Users';
+const SUMMARY_SHEET = 'Summary';
+const COL = { PUB: 1, AREA: 2, AUTHOR: 3, SCORE: 10, RANK: 11, LAT: 12, LNG: 13, PLACE: 14, RATED_AT: 15 };
+const HEADER_ROW = 1;
+
+// ---------------------------------------------------------------- menu
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Pub Map')
+    .addItem('Geocode new pubs', 'geocodeNewRows')
+    .addItem('Re-geocode selected row', 'regeocodeSelected')
+    .addSeparator()
+    .addItem('Rebuild Users tab', 'rebuildUsers')
+    .addToUi();
+}
+
+// ---------------------------------------------------------------- geocoding
+
+function geocodeNewRows() {
+  const sh = sheet_();
+  const rows = dataRows_(sh);
+  let done = 0, failed = [];
+
+  rows.forEach(function (row) {
+    if (!row.pub || row.lat) return;
+    const hit = lookup_(row.pub, row.area);
+    if (hit) {
+      sh.getRange(row.index, COL.LAT).setValue(hit.lat);
+      sh.getRange(row.index, COL.LNG).setValue(hit.lng);
+      sh.getRange(row.index, COL.PLACE).setValue(hit.placeId || '');
+      done++;
+    } else {
+      failed.push(row.pub);
+    }
+    Utilities.sleep(120);
+  });
+
+  let msg = done + ' pub(s) geocoded.';
+  if (failed.length) msg += ' Not found: ' + failed.join(', ') + '.';
+  SpreadsheetApp.getActive().toast(msg, 'Pub Map', 8);
+}
+
+function regeocodeSelected() {
+  const sh = sheet_();
+  const r = sh.getActiveCell().getRow();
+  if (r <= HEADER_ROW) return;
+  sh.getRange(r, COL.LAT, 1, 3).clearContent();
+  const pub = sh.getRange(r, COL.PUB).getValue();
+  const area = sh.getRange(r, COL.AREA).getValue();
+  const hit = lookup_(pub, area);
+  if (!hit) {
+    SpreadsheetApp.getActive().toast('No match for "' + pub + '".');
+    return;
+  }
+  sh.getRange(r, COL.LAT).setValue(hit.lat);
+  sh.getRange(r, COL.LNG).setValue(hit.lng);
+  sh.getRange(r, COL.PLACE).setValue(hit.placeId || '');
+  SpreadsheetApp.getActive().toast('Relocated: ' + pub);
+}
+
+/** Places Text Search, with a Geocoder fallback. */
+function lookup_(pub, area) {
+  const query = [pub, area, 'UK'].filter(String).join(', ');
+  const key = apiKey_();
+
+  try {
+    const res = UrlFetchApp.fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'post',
+      contentType: 'application/json',
+      muteHttpExceptions: true,
+      headers: {
+        'X-Goog-Api-Key': key,
+        'X-Goog-FieldMask': 'places.id,places.location,places.displayName'
+      },
+      payload: JSON.stringify({
+        textQuery: query,
+        includedType: 'bar',
+        regionCode: 'GB',
+        maxResultCount: 1
+      })
+    });
+    if (res.getResponseCode() === 200) {
+      const body = JSON.parse(res.getContentText());
+      if (body.places && body.places.length) {
+        const p = body.places[0];
+        return { lat: p.location.latitude, lng: p.location.longitude, placeId: p.id };
+      }
+    } else if (res.getResponseCode() === 403) {
+      throw new Error('Places API rejected the key (403) — check PLACES_API_KEY restrictions.');
+    } else {
+      console.warn('Places error ' + res.getResponseCode() + ': ' + res.getContentText());
+    }
+  } catch (e) {
+    console.warn('Places lookup threw: ' + e);
+  }
+
+  const geo = Maps.newGeocoder().setRegion('uk').geocode(query);
+  if (geo.status === 'OK' && geo.results.length) {
+    const loc = geo.results[0].geometry.location;
+    return { lat: loc.lat, lng: loc.lng, placeId: geo.results[0].place_id };
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------- web app
+
+function doGet() {
+  return HtmlService.createTemplateFromFile('Page')
+    .evaluate()
+    .setTitle('PlotMyPub')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function getApiKey() {
+  const k = PropertiesService.getScriptProperties().getProperty('MAPS_BROWSER_KEY');
+  if (!k) throw new Error('Add MAPS_BROWSER_KEY in Project Settings > Script Properties.');
+  return k;
+}
+
+/** Known raters, for the form's autocomplete. */
+function getUsers() {
+  const sh = SpreadsheetApp.getActive().getSheetByName(USERS_SHEET);
+  if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues()
+    .map(function (r) { return String(r[0] || '').trim(); })
+    .filter(String);
+}
+
+/**
+ * One entry per PUB, with every rating for it folded in.
+ *   score   = mean of all raters' /10
+ *   cats    = mean per category
+ *   ratings = [{author, score, cats}] so the page can filter by person
+ */
+function getPubs() {
+  const groups = {};
+
+  dataRows_(sheet_())
+    .filter(function (r) { return r.pub && r.lat && r.lng; })
+    .forEach(function (r) {
+      const key = r.placeId || (r.pub + '|' + r.area).toLowerCase();
+      if (!groups[key]) {
+        groups[key] = {
+          pub: r.pub, area: r.area,
+          lat: r.lat, lng: r.lng, placeId: r.placeId,
+          ratings: []
+        };
+      }
+      groups[key].ratings.push({ author: r.author, score: r.score, cats: r.cats });
+    });
+
+  return Object.keys(groups).map(function (k) {
+    const g = groups[k];
+    g.score = mean_(g.ratings.map(function (x) { return x.score; }));
+    g.cats = {};
+    ['location', 'beer', 'value', 'facilities', 'vibe'].forEach(function (c) {
+      g.cats[c] = mean_(g.ratings.map(function (x) { return x.cats[c]; }));
+    });
+    g.raters = g.ratings.length;
+    return g;
+  });
+}
+
+/**
+ * Add or update ONE author's rating of one pub.
+ * Matches on place ID + author, so different people never overwrite
+ * each other — but re-rating your own pub still updates in place.
+ */
+function submitPub(form) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const pub = String(form.pub || '').trim().replace(/\s+/g, ' ');
+    const area = String(form.area || '').trim().replace(/\s+/g, ' ');
+    const author = String(form.author || '').trim().replace(/\s+/g, ' ');
+    if (!pub) throw new Error('Pub name is required.');
+    if (!author) throw new Error('Your name is required.');
+
+    const keys = ['location', 'beer', 'value', 'facilities', 'vibe'];
+    const cats = keys.map(function (k) {
+      const n = Number(form[k]);
+      if (isNaN(n) || n < 0 || n > 5) throw new Error('Scores must be between 0 and 5.');
+      return n;
+    });
+
+    const sh = sheet_();
+    const rows = dataRows_(sh);
+
+    const hit = lookup_(pub, area);
+    if (!hit) throw new Error('Could not find "' + pub + '" — check the name and area.');
+
+    // Match this author's existing rating of this pub, if any.
+    const me = normaliseName_(author);
+    let target = null;
+    for (let i = 0; i < rows.length; i++) {
+      if (normaliseName_(rows[i].author) !== me) continue;
+      const sameId = hit.placeId && rows[i].placeId === hit.placeId;
+      const sameName = rows[i].pub.toLowerCase() === pub.toLowerCase() &&
+                       rows[i].area.toLowerCase() === area.toLowerCase();
+      if (sameId || sameName) { target = rows[i]; break; }
+    }
+
+    // Reuse the spelling this person already goes by, so
+    // "tommy" and "Tommy " don't become two users.
+    const display = canonicalName_(author);
+
+    const row = target ? target.index : sh.getLastRow() + 1;
+    sh.getRange(row, COL.PUB).setValue(pub);
+    sh.getRange(row, COL.AREA).setValue(area);
+    sh.getRange(row, COL.AUTHOR).setValue(display);
+    sh.getRange(row, 4, 1, 5).setValues([cats]);
+    sh.getRange(row, COL.LAT).setValue(hit.lat);
+    sh.getRange(row, COL.LNG).setValue(hit.lng);
+    sh.getRange(row, COL.PLACE).setValue(hit.placeId || '');
+    sh.getRange(row, COL.RATED_AT).setValue(new Date()).setNumberFormat('yyyy-mm-dd hh:mm');
+    if (!target) writeFormulas_(sh, row, row);
+
+    touchUser_(display);
+    SpreadsheetApp.flush();
+
+    const score = sh.getRange(row, COL.SCORE).getValue();
+    return {
+      pub: pub, area: area, author: display,
+      score: typeof score === 'number' ? score : null,
+      cats: {
+        location: cats[0], beer: cats[1], value: cats[2],
+        facilities: cats[3], vibe: cats[4]
+      },
+      lat: hit.lat, lng: hit.lng, placeId: hit.placeId || '',
+      updated: !!target
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Flat feed of individual ratings, newest first. Un-timestamped rows sink to the bottom. */
+function getActivity(limit) {
+  limit = limit || 40;
+  return dataRows_(sheet_())
+    .filter(function (r) { return r.pub && r.author; })
+    .map(function (r) {
+      return {
+        pub: r.pub, area: r.area, author: r.author,
+        score: r.score, cats: r.cats,
+        lat: r.lat, lng: r.lng, placeId: r.placeId,
+        ratedAt: r.ratedAt
+      };
+    })
+    .sort(function (a, b) { return (b.ratedAt || 0) - (a.ratedAt || 0); })
+    .slice(0, limit);
+}
+
+// ---------------------------------------------------------------- users
+
+/** Compare names case- and space-insensitively. Display keeps the original. */
+function normaliseName_(n) {
+  return String(n || '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+/** If this person is already known, reuse their existing spelling. */
+function canonicalName_(name) {
+  const want = normaliseName_(name);
+  const existing = getUsers();
+  for (let i = 0; i < existing.length; i++) {
+    if (normaliseName_(existing[i]) === want) return existing[i];
+  }
+  return String(name).replace(/\s+/g, ' ').trim();
+}
+
+/** Add to Users if new. 'Pubs rated' is a live COUNTIF, so nothing to update. */
+function touchUser_(name) {
+  const ss = SpreadsheetApp.getActive();
+  let sh = ss.getSheetByName(USERS_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(USERS_SHEET);
+    sh.getRange(1, 1, 1, 3).setValues([['Name', 'First seen', 'Pubs rated']])
+      .setFontWeight('bold').setFontColor('#FFFFFF').setBackground('#2F4F4F');
+    sh.setFrozenRows(1);
+  }
+  const want = normaliseName_(name);
+  const known = getUsers().map(normaliseName_);
+  if (known.indexOf(want) !== -1) return;
+
+  const r = sh.getLastRow() + 1;
+  sh.getRange(r, 1).setValue(name);
+  sh.getRange(r, 2).setValue(new Date()).setNumberFormat('yyyy-mm-dd');
+  sh.getRange(r, 3).setFormula("=COUNTIF('" + SHEET_NAME + "'!C:C,A" + r + ")");
+}
+
+/** Rebuild Users from whoever actually appears in column C. */
+function rebuildUsers() {
+  const rows = dataRows_(sheet_());
+  const seen = [];
+  rows.forEach(function (r) {
+    const n = normaliseName_(r.author);
+    if (n && seen.map(normaliseName_).indexOf(n) === -1) seen.push(r.author.trim());
+  });
+
+  const ss = SpreadsheetApp.getActive();
+  let sh = ss.getSheetByName(USERS_SHEET);
+  if (!sh) sh = ss.insertSheet(USERS_SHEET);
+  sh.clear();
+  sh.getRange(1, 1, 1, 3).setValues([['Name', 'First seen', 'Pubs rated']])
+    .setFontWeight('bold').setFontColor('#FFFFFF').setBackground('#2F4F4F')
+    .setHorizontalAlignment('center');
+  sh.setFrozenRows(1);
+
+  if (seen.length) {
+    const now = new Date();
+    sh.getRange(2, 1, seen.length, 2).setValues(seen.map(function (n) { return [n, now]; }));
+    sh.getRange(2, 2, seen.length, 1).setNumberFormat('yyyy-mm-dd');
+    seen.forEach(function (n, i) {
+      sh.getRange(i + 2, 3).setFormula("=COUNTIF('" + SHEET_NAME + "'!C:C,A" + (i + 2) + ")");
+    });
+  }
+  ss.toast(seen.length + ' rater(s) found.', 'Users rebuilt', 6);
+}
+
+// ---------------------------------------------------------------- helpers
+
+function sheet_() {
+  const sh = SpreadsheetApp.getActive().getSheetByName(SHEET_NAME);
+  if (!sh) throw new Error('No sheet named "' + SHEET_NAME + '".');
+  return sh;
+}
+
+function apiKey_() {
+  const k = PropertiesService.getScriptProperties().getProperty('PLACES_API_KEY');
+  if (!k) throw new Error('Add PLACES_API_KEY in Project Settings > Script Properties.');
+  return k;
+}
+
+function num_(v) { return typeof v === 'number' ? v : null; }
+
+function mean_(xs) {
+  const ok = xs.filter(function (x) { return typeof x === 'number'; });
+  if (!ok.length) return null;
+  return ok.reduce(function (a, b) { return a + b; }, 0) / ok.length;
+}
+
+/** Total /25, Score /10 and Rank for a row range. */
+function writeFormulas_(sh, from, to) {
+  for (let r = from; r <= to; r++) {
+    sh.getRange(r, 9).setFormula('=IF(COUNT(D' + r + ':H' + r + ')=5,SUM(D' + r + ':H' + r + '),"")');
+    sh.getRange(r, 10).setFormula('=IF(I' + r + '="","",I' + r + '/25*10)');
+    sh.getRange(r, 11).setFormula('=IF(J' + r + '="","",RANK(J' + r + ',$J$2:$J))');
+  }
+}
+
+/** Reads the grid once and returns tidy row objects. */
+function dataRows_(sh) {
+  const last = sh.getLastRow();
+  if (last <= HEADER_ROW) return [];
+  const values = sh.getRange(HEADER_ROW + 1, 1, last - HEADER_ROW, COL.RATED_AT).getValues();
+  return values.map(function (v, i) {
+    return {
+      index: HEADER_ROW + 1 + i,
+      pub: String(v[0] || '').replace(/\s+/g, ' ').trim(),
+      area: String(v[1] || '').replace(/\s+/g, ' ').trim(),
+      author: String(v[2] || '').trim(),
+      cats: {
+        location: num_(v[3]), beer: num_(v[4]), value: num_(v[5]),
+        facilities: num_(v[6]), vibe: num_(v[7])
+      },
+      score: num_(v[9]),
+      lat: num_(v[11]), lng: num_(v[12]),
+      placeId: String(v[13] || '').trim(),
+      ratedAt: v[14] instanceof Date ? v[14].getTime() : (v[14] ? new Date(v[14]).getTime() : null)
+    };
+  }).filter(function (r) { return !!r.pub; });
+}

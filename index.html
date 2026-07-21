@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>PlotMyPub</title>
+  <style>
+    :root{
+      --slate:#2F4F4F; --slate-d:#243c3c; --ink:#14213d;
+      --line:#e3e3e0; --muted:#6b7280; --bg:#f6f5f2; --card:#ffffff;
+      --bad:#b3261e; --good:#0F6E56;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%}
+
+    /* ---------- auth / gate screens (Phase 3 shell) ---------- */
+    body{
+      font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--ink);
+    }
+    body.gate{ display:flex; align-items:center; justify-content:center; padding:20px; }
+    body.app{ padding:0; }
+
+    .card{
+      background:var(--card); width:100%; max-width:380px; border-radius:12px;
+      box-shadow:0 4px 24px rgba(0,0,0,.10); overflow:hidden;
+    }
+    .ramp{height:6px; display:flex}
+    .ramp i{flex:1}
+    .ramp i:nth-child(1){background:#f8696b}
+    .ramp i:nth-child(2){background:#fbb46e}
+    .ramp i:nth-child(3){background:#ffeb84}
+    .ramp i:nth-child(4){background:#b1d67f}
+    .ramp i:nth-child(5){background:#63be7b}
+    .inner{padding:24px}
+    h1{margin:0 0 2px; font-size:22px; letter-spacing:.01em}
+    .tag{margin:0 0 20px; color:var(--muted); font-size:13px}
+    .inner h2{margin:0 0 4px; font-size:17px}
+    p.lede{margin:0 0 18px; color:var(--muted); font-size:13px; line-height:1.5}
+    .inner label{display:block; font-size:12px; color:#444; margin:0 0 5px}
+    .inner input[type=text],.inner input[type=email]{
+      width:100%; padding:11px 12px; font-size:15px; border:1px solid #ccc;
+      border-radius:7px; font-family:inherit;
+    }
+    .inner input:focus-visible{outline:2px solid var(--slate); outline-offset:1px; border-color:var(--slate)}
+    .inner button{
+      font-family:inherit; font-size:15px; cursor:pointer; border-radius:7px;
+      padding:11px 14px; border:0; width:100%;
+    }
+    .primary{background:var(--slate); color:#fff; font-weight:bold; margin-top:14px}
+    .primary:hover{background:var(--slate-d)}
+    .primary:disabled{background:#9aa5a5; cursor:default}
+    .ghost{background:#fff; border:1px solid #ccc; color:var(--ink); margin-top:10px}
+    .ghost:hover{background:#f3f3f1}
+    .row{margin:0 0 12px}
+    .msg{font-size:13px; margin-top:14px; min-height:16px; line-height:1.45}
+    .msg.bad{color:var(--bad)}
+    .msg.good{color:var(--good)}
+    .divider{display:flex; align-items:center; gap:10px; color:var(--muted);
+             font-size:12px; margin:18px 0 4px}
+    .divider::before,.divider::after{content:""; flex:1; height:1px; background:var(--line)}
+    .inner select{
+      width:100%; padding:10px 11px; font-size:15px; border:1px solid #ccc;
+      border-radius:7px; font-family:inherit; background:#fff;
+    }
+    .who{display:flex; justify-content:space-between; align-items:center;
+         font-size:12px; color:var(--muted); margin-bottom:16px}
+    .who button{width:auto; padding:6px 10px; font-size:12px}
+    .stat{font-variant-numeric:tabular-nums; font-weight:bold; color:var(--ink)}
+    .hidden{display:none}
+    .spin{color:var(--muted); font-size:13px; text-align:center; padding:10px 0}
+
+    /* ---------- map app (ported from page.html) ---------- */
+    #app{ position:fixed; inset:0; }
+    #map { height: 100%; width: 100%; }
+
+    #panel {
+      position: absolute; top: 12px; left: 12px; z-index: 5;
+      background: rgba(255,255,255,.96); border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.25);
+      padding: 12px 14px; min-width: 190px; font-size: 13px;
+      max-height: calc(100vh - 24px); overflow-y: auto;
+    }
+    #panel h1 { margin: 0 0 8px; font-size: 15px; letter-spacing: .02em; }
+    #panel .stat-row { display: flex; justify-content: space-between; gap: 14px; margin: 3px 0; }
+    #panel .stat-row b { font-variant-numeric: tabular-nums; }
+
+    .scale { display: flex; height: 9px; border-radius: 5px; overflow: hidden; margin: 10px 0 4px; }
+    .scale span { flex: 1; }
+    .scale-ends { display: flex; justify-content: space-between; font-size: 11px; color: #555; }
+
+    .pin {
+      display: flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4);
+      color: #14213d; font-size: 12px; font-weight: bold;
+      font-family: Arial, sans-serif; font-variant-numeric: tabular-nums;
+      cursor: pointer;
+    }
+    .iw { font-family: Arial, sans-serif; font-size: 13px; line-height: 1.5; }
+    .iw b { font-size: 14px; }
+    .iw .sc { font-size: 20px; font-weight: bold; font-variant-numeric: tabular-nums; }
+    .iw a { color: #1a73e8; text-decoration: none; }
+    .iw .brk {
+      margin: 8px 0 6px; padding: 6px 0; border-top: 1px solid #eee;
+      border-bottom: 1px solid #eee; display: grid;
+      grid-template-columns: 1fr auto; gap: 1px 10px; font-size: 12px;
+    }
+    .iw .brk span { color: #555; }
+    .iw .brk b { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; }
+    .iw .by { color: #777; font-size: 11px; font-style: italic; margin-bottom: 4px; }
+    .iw .shots { display: flex; gap: 4px; margin: 6px 0 2px; flex-wrap: wrap; }
+    .iw .shots figure { margin: 0; }
+    .iw .shots img {
+      width: 54px; height: 54px; object-fit: cover; border-radius: 5px;
+      cursor: pointer; background: #eee; display: block;
+    }
+    .iw .shots figcaption { font-size: 9px; color: #888; text-align: center; margin-top: 1px;
+      max-width: 54px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* full-image lightbox */
+    #lightbox {
+      position: fixed; inset: 0; z-index: 30; display: none;
+      background: rgba(0,0,0,.82); align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    #lightbox.open { display: flex; }
+    #lightbox img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+    #err {
+      position: absolute; bottom: 12px; left: 12px; z-index: 6;
+      background: #fdecea; color: #611a15; border-radius: 6px;
+      padding: 8px 12px; font-size: 13px; display: none; max-width: 320px;
+    }
+
+    /* group switcher, top-centre */
+    #groupBar {
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+      z-index: 5; background: rgba(255,255,255,.96); border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25); padding: 6px 8px;
+      display: flex; align-items: center; gap: 8px; font-size: 13px;
+    }
+    #groupBar select {
+      border: 1px solid #ccc; border-radius: 5px; padding: 5px 6px;
+      font-family: Arial, sans-serif; font-size: 13px; background: #fff;
+    }
+    #groupBar .me { color: #777; font-size: 12px; }
+    #groupBar button {
+      background: none; border: 0; color: var(--slate); cursor: pointer;
+      font-size: 12px; font-family: Arial, sans-serif; text-decoration: underline;
+      padding: 0;
+    }
+
+    /* add-a-pub */
+    #addBtn {
+      position: absolute; top: 12px; right: 12px; z-index: 5;
+      background: #2F4F4F; color: #fff; border: 0; cursor: pointer;
+      border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: bold;
+      font-family: Arial, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    #form {
+      position: absolute; top: 12px; right: 12px; z-index: 6; display: none;
+      background: rgba(255,255,255,.98); border-radius: 8px; width: 250px;
+      box-shadow: 0 2px 14px rgba(0,0,0,.3); padding: 14px; font-size: 13px;
+    }
+    #form h2 { margin: 0 0 10px; font-size: 14px; }
+    #form label { display: block; margin: 8px 0 2px; color: #444; font-size: 12px; }
+    #form input[type=text] {
+      width: 100%; box-sizing: border-box; padding: 6px 8px; font-size: 13px;
+      border: 1px solid #ccc; border-radius: 4px; font-family: Arial, sans-serif;
+    }
+    .cat { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
+    .cat span:first-child { flex: 1; font-size: 12px; color: #444; }
+    .cat input[type=range] { flex: 1.3; }
+    .cat .v { width: 24px; text-align: right; font-weight: bold; font-variant-numeric: tabular-nums; }
+    #formWho { font-size: 12px; color: #555; margin: 2px 0 4px; }
+    #formWho b { color: var(--ink); }
+    #formBtns { display: flex; gap: 8px; margin-top: 12px; }
+    #formBtns button {
+      flex: 1; padding: 8px; border-radius: 5px; cursor: pointer;
+      font-size: 13px; font-family: Arial, sans-serif;
+    }
+    #save { background: #2F4F4F; color: #fff; border: 0; font-weight: bold; }
+    #save:disabled { background: #999; cursor: default; }
+    #cancel { background: #fff; border: 1px solid #ccc; }
+    #formMsg { margin-top: 8px; font-size: 12px; min-height: 15px; }
+    #formMsg.bad { color: #b3261e; }
+    #formMsg.good { color: #0F6E56; }
+    #live { margin-top: 10px; padding-top: 8px; border-top: 1px solid #eee;
+            display: flex; justify-content: space-between; font-size: 12px; }
+    #live b { font-size: 15px; font-variant-numeric: tabular-nums; }
+
+    /* leaderboard */
+    #board { margin-top: 12px; padding-top: 10px; border-top: 1px solid #ddd; }
+    #board h2 { margin: 0 0 8px; font-size: 13px; letter-spacing: .02em; }
+    #city, #author, #sortBy {
+      width: 100%; padding: 5px 6px; font-size: 12px; margin-bottom: 6px;
+      border: 1px solid #ccc; border-radius: 4px; font-family: Arial, sans-serif;
+    }
+    #sortBy { margin-bottom: 8px; }
+    #board table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    #board td { padding: 3px 2px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    #board tr { cursor: pointer; }
+    #board tr:hover td { background: #f5f5f5; }
+    #board .pos { width: 16px; color: #888; font-variant-numeric: tabular-nums; }
+    #board .nm { max-width: 108px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #board .sc { text-align: right; font-weight: bold; font-variant-numeric: tabular-nums; width: 34px; }
+    #board .dot { width: 8px; }
+    #board .dot i { display: block; width: 8px; height: 8px; border-radius: 50%; }
+    #board .none { color: #888; font-style: italic; padding: 6px 0; }
+
+    /* recent activity */
+    #activityBtn {
+      position: absolute; top: 12px; right: 130px; z-index: 5;
+      background: #fff; color: #2F4F4F; border: 1px solid #2F4F4F; cursor: pointer;
+      border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: bold;
+      font-family: Arial, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    #activity {
+      position: absolute; top: 0; right: 0; bottom: 0; width: 300px; z-index: 7;
+      background: rgba(255,255,255,.98); box-shadow: -2px 0 14px rgba(0,0,0,.25);
+      transform: translateX(100%); transition: transform .22s ease;
+      display: flex; flex-direction: column; font-size: 13px;
+    }
+    #activity.open { transform: translateX(0); }
+    #activityHead {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 14px 8px; border-bottom: 1px solid #eee;
+    }
+    #activityHead h2 { margin: 0; font-size: 14px; }
+    #activityClose {
+      background: none; border: 0; font-size: 22px; line-height: 1;
+      cursor: pointer; color: #777; padding: 0 4px;
+    }
+    #activityList { overflow-y: auto; padding: 6px 0; }
+    .act {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px; border-bottom: 1px solid #f2f2f2; cursor: pointer;
+    }
+    .act:hover { background: #f5f5f5; }
+    .act i { flex: 0 0 9px; width: 9px; height: 9px; border-radius: 50%; }
+    .act .body { flex: 1; min-width: 0; }
+    .act .pub { font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .act .meta { color: #777; font-size: 11px; }
+    .act .sc { font-weight: bold; font-variant-numeric: tabular-nums; }
+    .act .none { color: #888; font-style: italic; padding: 12px 14px; }
+
+    /* mobile */
+    @media (max-width: 640px) {
+      #panel {
+        top: auto; bottom: 0; left: 0; right: 0;
+        border-radius: 12px 12px 0 0;
+        max-height: 45vh; min-width: 0;
+        padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+        transition: max-height .2s ease;
+      }
+      #panel.collapsed { max-height: 46px; overflow: hidden; }
+      #panel h1 { cursor: pointer; position: relative; }
+      #panel h1::after {
+        content: '▾'; position: absolute; right: 0; top: 0;
+        transition: transform .2s;
+      }
+      #panel.collapsed h1::after { transform: rotate(180deg); }
+      #panel .stat-row { display: inline-flex; margin-right: 12px; gap: 6px; }
+
+      #groupBar { top: 8px; left: 8px; transform: none; }
+      #addBtn { top: auto; bottom: calc(50vh + 8px); right: 12px; padding: 12px 18px; }
+
+      #form {
+        top: 0; left: 0; right: 0; bottom: 0; width: auto;
+        border-radius: 0; overflow-y: auto;
+        padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+      }
+      #form input[type=text], #city, #author, #sortBy { font-size: 16px; padding: 10px 8px; }
+      .cat { margin: 12px 0; }
+      .cat input[type=range] { height: 28px; }
+      .pin { width: 40px; height: 40px; font-size: 13px; }
+      #board td { padding: 8px 2px; }
+      #board .nm { max-width: none; }
+      #formBtns button { padding: 12px; font-size: 15px; }
+      #err { bottom: auto; top: 12px; left: 12px; right: 12px; }
+      #activityBtn { top: auto; bottom: calc(50vh + 8px); right: 130px; padding: 12px 16px; }
+      #activity {
+        top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 70vh;
+        border-radius: 12px 12px 0 0; transform: translateY(100%);
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      #activity.open { transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="gate">
+
+  <!-- ============ AUTH / GATE (Phase 3 shell, unchanged) ============ -->
+  <div class="card" id="gate">
+    <div class="ramp"><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="inner">
+      <h1>PlotMyPub</h1>
+      <p class="tag">Rate the pubs. Settle the arguments.</p>
+
+      <section id="s-signin" class="hidden">
+        <h2>Sign in</h2>
+        <p class="lede">We'll email you a link — no password to remember. Tap it and you're in.</p>
+        <div class="row">
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <button id="send" class="primary">Email me a link</button>
+        <div id="signinMsg" class="msg"></div>
+      </section>
+
+      <section id="s-sent" class="hidden">
+        <h2>Check your email</h2>
+        <p class="lede">A sign-in link is on its way to <b id="sentTo"></b>. It opens this app straight to your pubs.</p>
+        <button id="resend" class="ghost">Send it again</button>
+        <button id="useOther" class="ghost">Use a different email</button>
+      </section>
+
+      <section id="s-name" class="hidden">
+        <h2>Pick your name</h2>
+        <p class="lede">This is how your ratings are signed. If you rated pubs before the switch, type that same name to pick your history back up.</p>
+        <div class="row">
+          <label for="dname">Display name</label>
+          <input id="dname" type="text" placeholder="Tommy" autocomplete="off">
+        </div>
+        <button id="saveName" class="primary">Continue</button>
+        <div id="nameMsg" class="msg"></div>
+      </section>
+
+      <section id="s-groups" class="hidden">
+        <div class="who">
+          <span>Signed in as <b id="meName" class="stat"></b></span>
+          <button id="signout" class="ghost">Sign out</button>
+        </div>
+
+        <div id="hasGroups" class="hidden">
+          <label for="groupSel">Your group</label>
+          <select id="groupSel"></select>
+          <button id="openMap" class="primary">Open the map</button>
+        </div>
+
+        <div id="noGroups" class="hidden">
+          <h2>Join your group</h2>
+          <p class="lede">Got an invite word from a friend? Enter it to see their group's pubs.</p>
+          <div class="row">
+            <label for="code">Invite word</label>
+            <input id="code" type="text" placeholder="rookery" autocomplete="off">
+          </div>
+          <button id="join" class="primary">Join group</button>
+
+          <div class="divider">or start fresh</div>
+          <div class="row">
+            <label for="newName">New group name</label>
+            <input id="newName" type="text" placeholder="The Regulars" autocomplete="off">
+          </div>
+          <div class="row">
+            <label for="newCode">Pick an invite word</label>
+            <input id="newCode" type="text" placeholder="a word friends will remember" autocomplete="off">
+          </div>
+          <button id="create" class="ghost">Create group</button>
+          <div id="groupMsg" class="msg"></div>
+        </div>
+      </section>
+
+      <div id="loading" class="spin">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ============ MAP APP (ported from page.html) ============ -->
+  <div id="app" class="hidden">
+    <div id="panel">
+      <h1>Pub Ratings</h1>
+      <div class="stat-row"><span>Mapped</span><b id="count">…</b></div>
+      <div class="stat-row"><span>Average</span><b id="avg">…</b></div>
+      <div class="stat-row"><span>Best</span><b id="best">…</b></div>
+      <div class="scale">
+        <span style="background:#f8696b"></span><span style="background:#fbb46e"></span>
+        <span style="background:#ffeb84"></span><span style="background:#b1d67f"></span>
+        <span style="background:#63be7b"></span>
+      </div>
+      <div class="scale-ends">
+        <span id="scLo">4.0</span><span id="scMid">6.5</span><span id="scHi">9.0</span>
+      </div>
+      <div id="board">
+        <h2>Leaderboard</h2>
+        <select id="city"><option value="">All cities</option></select>
+        <select id="author"><option value="">All authors</option></select>
+        <select id="sortBy">
+          <option value="score">Overall score</option>
+          <option value="location">Location</option>
+          <option value="beer">Beer Selection</option>
+          <option value="value">Value</option>
+          <option value="facilities">Facilities</option>
+          <option value="vibe">Vibe</option>
+        </select>
+        <table><tbody id="boardBody"></tbody></table>
+      </div>
+    </div>
+
+    <div id="groupBar">
+      <select id="mapGroupSel"></select>
+      <span class="me">·&nbsp;<b id="mapMe"></b></span>
+      <button id="mapSignout">sign out</button>
+    </div>
+
+    <button id="addBtn">+ Add a pub</button>
+
+    <div id="form">
+      <h2>Rate a pub</h2>
+      <label for="f_pub">Pub name</label>
+      <input id="f_pub" type="text" placeholder="The Old Juke">
+      <label for="f_area">Area</label>
+      <input id="f_area" type="text" placeholder="Bristol, Kings Street">
+
+      <div id="formWho">Rating as <b id="f_authorName">—</b></div>
+
+      <label style="margin-top:10px">Scores (0–5)</label>
+      <div id="cats"></div>
+
+      <label for="f_photo" style="margin-top:10px">Photo <span style="color:#999">(optional)</span></label>
+      <input id="f_photo" type="file" accept="image/*" style="font-size:12px">
+      <div id="f_photoPreview" style="margin-top:6px"></div>
+
+      <div id="live"><span>Score</span><b id="liveScore">—</b></div>
+
+      <div id="formBtns">
+        <button id="cancel">Cancel</button>
+        <button id="save">Save</button>
+      </div>
+      <div id="formMsg"></div>
+    </div>
+
+    <button id="activityBtn">Recent activity</button>
+
+    <div id="activity">
+      <div id="activityHead">
+        <h2>Recent activity</h2>
+        <button id="activityClose">×</button>
+      </div>
+      <div id="activityList"></div>
+    </div>
+
+    <div id="map"></div>
+    <div id="err"></div>
+
+    <div id="lightbox"><img id="lightboxImg" alt="Pub photo"></div>
+    <input id="iwPhotoInput" type="file" accept="image/*" style="display:none">
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    // ================= CONFIG =================
+    const SUPABASE_URL = 'https://bgjcfhbrrggdubgnbvaj.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_hFPb_xrfHrPm3Ub1yisa5A_TYg80y3n';
+
+    // Reuse the existing MAPS_BROWSER_KEY from the old Apps Script project.
+    // Referrer-restricted; add http://localhost:3000/* now and the CDN origin at Phase 7.
+    // Needs the "Maps JavaScript API" enabled. Places is NOT called from the
+    // browser (geocoding goes through the Edge Function), so Places need not be
+    // allowed on THIS key.
+    const MAPS_BROWSER_KEY = 'AIzaSyDLQKoBZQpJ9mxOvr6fCpmnoa1zK6NwXDw';
+
+    const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ================= tiny helpers =================
+    const $ = (id) => document.getElementById(id);
+    const setMsg = (el, text, cls) => { el.textContent = text; el.className = 'msg' + (cls ? ' ' + cls : ''); };
+
+    // ===========================================================
+    //  AUTH / GATE  (Phase 3 shell logic, lightly extended)
+    // ===========================================================
+    const GATE_SECTIONS = ['s-signin','s-sent','s-name','s-groups','loading'];
+    function showGate(id) {
+      document.body.className = 'gate';
+      $('gate').classList.remove('hidden');
+      $('app').classList.add('hidden');
+      GATE_SECTIONS.forEach((s) => $(s).classList.toggle('hidden', s !== id));
+    }
+
+    let PROFILE = null;          // { id, display_name, ... }
+    let GROUPS = [];             // groups this user belongs to
+    let ACTIVE_GROUP = null;     // { id, name } currently selected
+
+    let routing = false;
+    async function route() {
+      if (routing) return; routing = true;
+      try {
+        const { data:{ session } } = await sb.auth.getSession();
+        if (!session) { showGate('s-signin'); return; }
+
+        const { data: prof, error } = await sb
+          .from('profiles').select('*').eq('user_id', session.user.id).maybeSingle();
+        if (error) setMsg($('nameMsg'), error.message, 'bad');
+
+        if (!prof) { showGate('s-name'); $('dname').focus(); return; }
+        PROFILE = prof;
+        $('meName').textContent = prof.display_name;
+
+        await loadGroups();
+        showGate('s-groups');
+      } finally { routing = false; }
+    }
+
+    async function loadGroups() {
+      const { data: groups } = await sb.from('groups').select('*').order('name');
+      GROUPS = groups || [];
+      const has = GROUPS.length > 0;
+      $('hasGroups').classList.toggle('hidden', !has);
+      $('noGroups').classList.toggle('hidden', has);
+      if (!has) return;
+
+      const sel = $('groupSel');
+      sel.innerHTML = '';
+      GROUPS.forEach((g) => {
+        const o = document.createElement('option');
+        o.value = g.id; o.textContent = g.name; sel.appendChild(o);
+      });
+      sel.value = (ACTIVE_GROUP && GROUPS.some(g => g.id === ACTIVE_GROUP.id))
+        ? ACTIVE_GROUP.id : GROUPS[0].id;
+    }
+
+    // ---- magic-link sign in ----
+    async function sendLink() {
+      const email = $('email').value.trim();
+      if (!email) { setMsg($('signinMsg'), 'Enter your email first.', 'bad'); return; }
+      $('send').disabled = true; setMsg($('signinMsg'), 'Sending…');
+      const { error } = await sb.auth.signInWithOtp({
+        email, options: { emailRedirectTo: window.location.origin }
+      });
+      $('send').disabled = false;
+      if (error) { setMsg($('signinMsg'), error.message, 'bad'); return; }
+      $('sentTo').textContent = email;
+      showGate('s-sent');
+    }
+    $('send').onclick = sendLink;
+    $('email').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendLink(); });
+    $('resend').onclick = () => sb.auth.signInWithOtp({
+      email: $('sentTo').textContent, options: { emailRedirectTo: window.location.origin }
+    });
+    $('useOther').onclick = () => showGate('s-signin');
+
+    // ---- claim / create profile ----
+    $('saveName').onclick = async () => {
+      const name = $('dname').value.trim();
+      if (!name) { setMsg($('nameMsg'), 'Type a name to continue.', 'bad'); return; }
+      $('saveName').disabled = true; setMsg($('nameMsg'), 'Saving…');
+      const { error } = await sb.rpc('claim_or_create_profile', { p_name: name });
+      $('saveName').disabled = false;
+      if (error) { setMsg($('nameMsg'), error.message, 'bad'); return; }
+      route();
+    };
+
+    // ---- join / create group ----
+    $('join').onclick = async () => {
+      const code = $('code').value.trim();
+      if (!code) { setMsg($('groupMsg'), 'Enter the invite word.', 'bad'); return; }
+      $('join').disabled = true; setMsg($('groupMsg'), 'Joining…');
+      const { error } = await sb.rpc('join_group', { p_code: code });
+      $('join').disabled = false;
+      if (error) { setMsg($('groupMsg'), error.message, 'bad'); return; }
+      loadGroups().then(() => showGate('s-groups'));
+    };
+    $('create').onclick = async () => {
+      const name = $('newName').value.trim(), code = $('newCode').value.trim();
+      if (!name || !code) { setMsg($('groupMsg'), 'Name the group and give it an invite word.', 'bad'); return; }
+      $('create').disabled = true; setMsg($('groupMsg'), 'Creating…');
+      const { error } = await sb.rpc('create_group', { p_name: name, p_invite_code: code });
+      $('create').disabled = false;
+      if (error) { setMsg($('groupMsg'), error.message, 'bad'); return; }
+      loadGroups().then(() => showGate('s-groups'));
+    };
+
+    async function doSignOut() { await sb.auth.signOut(); PROFILE = null; ACTIVE_GROUP = null; showGate('s-signin'); }
+    $('signout').onclick = doSignOut;
+    $('mapSignout').onclick = doSignOut;
+
+    // ---- enter the map ----
+    $('openMap').onclick = () => {
+      const g = GROUPS.find((x) => x.id === $('groupSel').value) || GROUPS[0];
+      ACTIVE_GROUP = { id: g.id, name: g.name };
+      enterApp();
+    };
+
+    // ===========================================================
+    //  MAP APP
+    // ===========================================================
+    var PUBS = [], MARKERS = [], INFO = null, MAP = null, MAPS_LOADED = false;
+
+    var CATS = [
+      { key: 'location',   label: 'Location' },
+      { key: 'beer',       label: 'Beer Selection' },
+      { key: 'value',      label: 'Value' },
+      { key: 'facilities', label: 'Facilities' },
+      { key: 'vibe',       label: 'Vibe' }
+    ];
+
+    function isMobile() { return window.innerWidth <= 640; }
+
+    function boundsPadding() {
+      return isMobile()
+        ? { top: 60, right: 40, bottom: Math.round(window.innerHeight * 0.45) + 20, left: 40 }
+        : 60;
+    }
+
+    // ---------- Supabase data layer (replaces google.script.run) ----------
+
+    /**
+     * getPubs(): two queries, assembled to the exact shape the render code wants.
+     *   1) pub_scores view  → per-pub averages (+ raters count)
+     *   2) ratings⋈profiles → per-author breakdown for the author filter
+     * Scoped to the active group.
+     */
+    async function fetchPubs() {
+      const gid = ACTIVE_GROUP.id;
+
+      const [scoresRes, ratingsRes] = await Promise.all([
+        sb.from('pub_scores').select('*').eq('group_id', gid),
+        sb.from('ratings')
+          .select('location,beer,value,facilities,vibe,photo_path,profile_id,pubs!inner(id,name,area,lat,lng,place_id,group_id),profiles!inner(display_name)')
+          .eq('group_id', gid)
+      ]);
+      if (scoresRes.error) throw scoresRes.error;
+      if (ratingsRes.error) throw ratingsRes.error;
+
+      // index averages by pub id
+      const byId = {};
+      (scoresRes.data || []).forEach((s) => {
+        byId[s.pub_id] = {
+          pub: s.name, area: s.area,
+          pubId: s.pub_id, groupId: s.group_id,
+          lat: s.lat, lng: s.lng, placeId: s.place_id,
+          score: s.score,
+          cats: {
+            location: s.location, beer: s.beer, value: s.value,
+            facilities: s.facilities, vibe: s.vibe
+          },
+          raters: s.raters,
+          ratings: []
+        };
+      });
+
+      // fold in per-author rows
+      (ratingsRes.data || []).forEach((r) => {
+        const p = r.pubs; if (!p) return;
+        let g = byId[p.id];
+        if (!g) {
+          // pub with rows but not yet in pub_scores (shouldn't happen, but be safe)
+          g = byId[p.id] = {
+            pub: p.name, area: p.area, pubId: p.id, groupId: p.group_id,
+            lat: p.lat, lng: p.lng, placeId: p.place_id,
+            score: null, cats: {}, raters: 0, ratings: []
+          };
+        }
+        const cats = {
+          location: r.location, beer: r.beer, value: r.value,
+          facilities: r.facilities, vibe: r.vibe
+        };
+        const catScore = (r.location + r.beer + r.value + r.facilities + r.vibe) / 25 * 10;
+        g.ratings.push({
+          author: r.profiles ? r.profiles.display_name : '—',
+          profileId: r.profile_id,
+          score: catScore, cats, photoPath: r.photo_path || null
+        });
+      });
+
+      return Object.keys(byId)
+        .map((k) => byId[k])
+        .filter((p) => p.pub && p.lat != null && p.lng != null);
+    }
+
+    /** getUsers(): display names of the active group's members, for autocomplete. */
+    async function fetchUsers() {
+      const gid = ACTIVE_GROUP.id;
+      const { data, error } = await sb
+        .from('group_members')
+        .select('profiles!inner(display_name)')
+        .eq('group_id', gid);
+      if (error) { console.warn(error); return []; }
+      return (data || []).map((m) => m.profiles && m.profiles.display_name).filter(Boolean);
+    }
+
+    /**
+     * submitPub(): geocode via Edge Function, then upsert pub + rating.
+     * author comes from the session profile, not a typed field.
+     */
+    async function submitPub(payload) {
+      const gid = ACTIVE_GROUP.id;
+
+      // 1) geocode (Phase 5 Edge Function, key server-side)
+      const { data: { session } } = await sb.auth.getSession();
+      const geoRes = await fetch(SUPABASE_URL + '/functions/v1/geocode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + session.access_token,
+          'apikey': SUPABASE_KEY
+        },
+        body: JSON.stringify({ pub: payload.pub, area: payload.area })
+      });
+      const geo = await geoRes.json();
+      if (!geoRes.ok) throw new Error(geo.error || 'Could not locate that pub.');
+
+      // 2) upsert the pub for this group (unique on group_id, place_id)
+      const { data: pubRow, error: pubErr } = await sb
+        .from('pubs')
+        .upsert({
+          group_id: gid, name: payload.pub, area: payload.area,
+          lat: geo.lat, lng: geo.lng, place_id: geo.placeId
+        }, { onConflict: 'group_id,place_id' })
+        .select()
+        .single();
+      if (pubErr) throw pubErr;
+
+      // 3) upsert my rating of it (unique on pub_id, profile_id)
+      const { error: ratErr } = await sb
+        .from('ratings')
+        .upsert({
+          pub_id: pubRow.id, group_id: gid, profile_id: PROFILE.id,
+          location: payload.location, beer: payload.beer, value: payload.value,
+          facilities: payload.facilities, vibe: payload.vibe
+        }, { onConflict: 'pub_id,profile_id' });
+      if (ratErr) throw ratErr;
+
+      const catScore = (payload.location + payload.beer + payload.value +
+                        payload.facilities + payload.vibe) / 25 * 10;
+      return {
+        pub: payload.pub, area: payload.area, author: PROFILE.display_name,
+        score: catScore,
+        cats: {
+          location: payload.location, beer: payload.beer, value: payload.value,
+          facilities: payload.facilities, vibe: payload.vibe
+        },
+        lat: geo.lat, lng: geo.lng, placeId: geo.placeId,
+        pubId: pubRow.id, groupId: gid
+      };
+    }
+
+    /** getActivity(): flat feed of ratings, newest first, scoped to group. */
+    async function fetchActivity(limit) {
+      const gid = ACTIVE_GROUP.id;
+      const { data, error } = await sb
+        .from('ratings')
+        .select('location,beer,value,facilities,vibe,created_at,pubs!inner(name,area,lat,lng,place_id),profiles!inner(display_name)')
+        .eq('group_id', gid)
+        .order('created_at', { ascending: false })
+        .limit(limit || 40);
+      if (error) { console.warn(error); return []; }
+      return (data || []).map((r) => {
+        const p = r.pubs || {};
+        const cats = {
+          location: r.location, beer: r.beer, value: r.value,
+          facilities: r.facilities, vibe: r.vibe
+        };
+        return {
+          pub: p.name, area: p.area,
+          author: r.profiles ? r.profiles.display_name : '—',
+          score: (r.location + r.beer + r.value + r.facilities + r.vibe) / 25 * 10,
+          cats, lat: p.lat, lng: p.lng, placeId: p.place_id,
+          ratedAt: r.created_at ? new Date(r.created_at).getTime() : null
+        };
+      });
+    }
+
+    // ---------- photos (Phase 6) ----------
+    var PHOTO_BUCKET = 'pub-photos';
+
+    /** Object path for one author's photo of one pub. Deterministic:
+     *  re-uploading overwrites in place, so no orphans. */
+    function photoPath(groupId, pubId, profileId) {
+      return groupId + '/' + pubId + '/' + profileId + '.jpg';
+    }
+
+    // Signed URLs expire; cache them a short while, keyed by path+size.
+    var SIGNED_CACHE = {};                     // key -> { url, exp }
+    var SIGN_TTL = 3600;                        // seconds the signed URL is valid
+    var SIGN_REUSE = 3000 * 1000;              // ms we reuse a cached URL before re-signing
+
+    /** Signed URL for a stored photo, optionally transformed to a width.
+     *  Returns null if there's no photo or signing fails. */
+    async function signedPhoto(path, width) {
+      if (!path) return null;
+      var key = path + '|' + (width || 'full');
+      var now = Date.now();
+      var hit = SIGNED_CACHE[key];
+      if (hit && hit.exp > now) return hit.url;
+
+      var opts = width ? { transform: { width: width, resize: 'cover' } } : undefined;
+      var res = await sb.storage.from(PHOTO_BUCKET).createSignedUrl(path, SIGN_TTL, opts);
+      if (res.error || !res.data) { return null; }
+      SIGNED_CACHE[key] = { url: res.data.signedUrl, exp: now + SIGN_REUSE };
+      return res.data.signedUrl;
+    }
+
+    /** Record the stored photo path on my rating of a pub. */
+    async function setRatingPhotoPath(pubId, path) {
+      var res = await sb.from('ratings')
+        .update({ photo_path: path })
+        .eq('pub_id', pubId)
+        .eq('profile_id', PROFILE.id);
+      if (res.error) throw res.error;
+    }
+
+    /** Upload (or overwrite) the given file at path. Resolves on success. */
+    async function uploadPhoto(path, file) {
+      var res = await sb.storage.from(PHOTO_BUCKET).upload(path, file, {
+        upsert: true,
+        contentType: file.type || 'image/jpeg',
+        cacheControl: '3600'
+      });
+      if (res.error) throw res.error;
+      // bust any cached signed URLs for this path
+      Object.keys(SIGNED_CACHE).forEach(function (k) {
+        if (k.indexOf(path + '|') === 0) delete SIGNED_CACHE[k];
+      });
+      return path;
+    }
+
+    // ---------- colour ramp (unchanged from page.html) ----------
+    function colourFor(score) {
+      var stops = [
+        { at: 4.0, rgb: [248, 105, 107] },
+        { at: 6.5, rgb: [255, 235, 132] },
+        { at: 9.0, rgb: [99, 190, 123] }
+      ];
+      if (score == null) return '#cccccc';
+      var s = Math.max(stops[0].at, Math.min(stops[2].at, score));
+      var lo = s <= stops[1].at ? stops[0] : stops[1];
+      var hi = s <= stops[1].at ? stops[1] : stops[2];
+      var t = (s - lo.at) / (hi.at - lo.at);
+      var c = lo.rgb.map(function (v, i) { return Math.round(v + t * (hi.rgb[i] - v)); });
+      return 'rgb(' + c.join(',') + ')';
+    }
+
+    function pinFor(pub) {
+      var key = sortKey();
+      var v = valueFor(pub, key);
+      var el = document.createElement('div');
+      el.className = 'pin';
+      el.style.background = colourForKey(v, key);
+      el.textContent = v == null ? '?' : v.toFixed(1);
+      el.title = pub.pub;
+      return el;
+    }
+
+    function infoHtml(p) {
+      var link = p.placeId
+        ? '<a href="https://www.google.com/maps/search/?api=1&query=' +
+          encodeURIComponent(p.pub) + '&query_place_id=' + p.placeId +
+          '" target="_blank">Open in Google Maps</a>'
+        : '';
+      var breakdown = '';
+      if (p.cats) {
+        breakdown = '<div class="brk">' + CATS.map(function (c) {
+          var v = p.cats[c.key];
+          return '<span>' + c.label + '</span><b>' + (v == null ? '—' : v.toFixed(1)) + '</b>';
+        }).join('') + '</div>';
+      }
+      var by = '';
+      if (p.soloAuthor) {
+        by = '<div class="by">' + escapeHtml(p.soloAuthor) + "'s rating</div>";
+      } else if (p.raters > 1) {
+        var spread = p.ratings.map(function (r) {
+          return escapeHtml(r.author) + ' ' + r.score.toFixed(1);
+        }).join(' · ');
+        by = '<div class="by">average of ' + p.raters + ' — ' + spread + '</div>';
+      } else if (p.ratings && p.ratings.length) {
+        by = '<div class="by">rated by ' + escapeHtml(p.ratings[0].author) + '</div>';
+      }
+
+      // Photo strip: solo view -> that author's one photo; average view ->
+      // one thumb per rater who has one. Slots fill in async after open.
+      var shots = '';
+      var withPhotos = (p.ratings || []).filter(function (r) { return r.photoPath; });
+      if (withPhotos.length) {
+        shots = '<div class="shots">' + withPhotos.map(function (r) {
+          return '<figure>' +
+            '<img data-photo="' + escapeHtml(r.photoPath) + '" alt="' +
+              escapeHtml(r.author) + "'s photo\" />" +
+            (p.soloAuthor ? '' : '<figcaption>' + escapeHtml(r.author) + '</figcaption>') +
+          '</figure>';
+        }).join('') + '</div>';
+      }
+
+      // Do I have a rating of this pub? If so, offer photo add/replace.
+      var mineHere = PROFILE && (p.ratings || []).some(function (r) {
+        return r.profileId === PROFILE.id;
+      });
+      var myPhoto = '';
+      if (mineHere && p.pubId && p.groupId) {
+        var mineRow = (p.ratings || []).filter(function (r) { return r.profileId === PROFILE.id; })[0];
+        var verb = (mineRow && mineRow.photoPath) ? 'Replace my photo' : 'Add my photo';
+        myPhoto = '<div style="margin-top:6px"><a href="#" class="addPhoto" ' +
+          'data-pub="' + escapeHtml(p.pubId) + '" data-group="' + escapeHtml(p.groupId) +
+          '">📷 ' + verb + '</a></div>';
+      }
+
+      return '<div class="iw"><b>' + escapeHtml(p.pub) + '</b><br>' +
+             '<span style="color:#555">' + escapeHtml(p.area || '') + '</span><br>' +
+             '<span class="sc" style="color:' + colourFor(p.score) + '">' +
+             (p.score == null ? '—' : p.score.toFixed(2)) + '</span>' +
+             '<span style="color:#777"> / 10</span>' +
+             breakdown + by + shots + myPhoto + link + '</div>';
+    }
+
+    /** After an info-window renders, swap each photo slot's data-photo path
+     *  for a signed thumbnail URL, and wire tap-to-enlarge. */
+    async function fillPhotoSlots() {
+      var imgs = document.querySelectorAll('.iw .shots img[data-photo]');
+      for (var i = 0; i < imgs.length; i++) {
+        (function (img) {
+          var path = img.getAttribute('data-photo');
+          img.removeAttribute('data-photo');
+          signedPhoto(path, 108).then(function (url) {   // 2x for retina at 54px
+            if (url) img.src = url;
+          });
+          img.addEventListener('click', function () {
+            signedPhoto(path, null).then(function (full) {
+              if (full) openLightbox(full);
+            });
+          });
+        })(imgs[i]);
+      }
+
+      // "Add/replace my photo" link -> shared hidden file input
+      var link = document.querySelector('.iw a.addPhoto');
+      if (link) {
+        link.addEventListener('click', function (e) {
+          e.preventDefault();
+          IW_PHOTO_TARGET = {
+            pubId: link.getAttribute('data-pub'),
+            groupId: link.getAttribute('data-group')
+          };
+          $('iwPhotoInput').click();
+        });
+      }
+    }
+
+    // Shared hidden input the info-window link drives.
+    var IW_PHOTO_TARGET = null;
+    $('iwPhotoInput').addEventListener('change', function () {
+      var file = (this.files || [])[0];
+      var t = IW_PHOTO_TARGET;
+      this.value = '';
+      if (!file || !t) return;
+      var path = photoPath(t.groupId, t.pubId, PROFILE.id);
+      uploadPhoto(path, file)
+        .then(function () { return setRatingPhotoPath(t.pubId, path); })
+        .then(function () { return renderPubs(); })
+        .then(function () {
+          // reopen the pub so the new photo shows
+          var again = PUBS.filter(function (p) { return p.pubId === t.pubId; })[0];
+          if (again) focusPub(viewOf(again) || again);
+        })
+        .catch(function (e) { showError('Photo upload failed: ' + (e.message || e)); });
+    });
+
+    function openLightbox(url) {
+      var lb = $('lightbox');
+      $('lightboxImg').src = url;
+      lb.classList.add('open');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    // ---------- map init ----------
+    async function initMap() {
+      const { Map, InfoWindow } = await google.maps.importLibrary('maps');
+      await google.maps.importLibrary('marker');
+
+      MAP = new Map($('map'), {
+        mapId: 'DEMO_MAP_ID',
+        center: { lat: 52.2, lng: -1.5 },
+        zoom: 6,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        zoomControl: !isMobile(),
+        gestureHandling: 'greedy'
+      });
+      INFO = new InfoWindow();
+      INFO.addListener('domready', fillPhotoSlots);
+      await renderPubs();
+    }
+
+    /** (Re)load pubs for the active group and (re)draw everything. */
+    async function renderPubs() {
+      // clear old markers
+      MARKERS.forEach((m) => { m.marker.map = null; });
+      MARKERS = [];
+      if (INFO) INFO.close();
+
+      try {
+        PUBS = await fetchPubs();
+      } catch (e) {
+        showError('Could not load pubs: ' + (e.message || e));
+        PUBS = [];
+      }
+
+      const { AdvancedMarkerElement } = await google.maps.importLibrary('marker');
+      var bounds = new google.maps.LatLngBounds();
+      PUBS.forEach(function (p) {
+        var m = new AdvancedMarkerElement({
+          map: MAP,
+          position: { lat: p.lat, lng: p.lng },
+          content: pinFor(p),
+          title: p.pub + ' — ' + (p.score == null ? '?' : p.score.toFixed(2))
+        });
+        var entry = { marker: m, pub: p, view: p };
+        m.addListener('click', function () {
+          INFO.setContent(infoHtml(entry.view || entry.pub));
+          INFO.open(MAP, m);
+        });
+        MARKERS.push(entry);
+        bounds.extend({ lat: p.lat, lng: p.lng });
+      });
+
+      if (PUBS.length) {
+        MAP.fitBounds(bounds, boundsPadding());
+        if (PUBS.length === 1) MAP.setZoom(15);
+      }
+      refreshFilterLists();
+      updateLegend();
+      applyFilters();
+      loadUsers();
+      if (isMobile()) $('panel').classList.add('collapsed');
+    }
+
+    function renderStats(list) {
+      var scored = list.filter(function (p) { return p.score != null; });
+      $('count').textContent = list.length;
+      $('avg').textContent = scored.length
+        ? (scored.reduce(function (a, p) { return a + p.score; }, 0) / scored.length).toFixed(2)
+        : '—';
+      $('best').textContent = scored.length
+        ? Math.max.apply(null, scored.map(function (p) { return p.score; })).toFixed(2)
+        : '—';
+    }
+
+    // ---------- leaderboard ----------
+    function cityOf(area) { return String(area || '').split(',')[0].trim() || '—'; }
+
+    function refreshFilterLists() {
+      fillSelect('city', PUBS.map(function (p) { return cityOf(p.area); }), 'All cities');
+      var names = [];
+      PUBS.forEach(function (p) {
+        (p.ratings || []).forEach(function (r) { names.push(r.author); });
+      });
+      fillSelect('author', names, 'Everyone (average)');
+    }
+
+    function fillSelect(id, rawValues, allLabel) {
+      var sel = $(id);
+      var current = sel.value;
+      var vals = [];
+      rawValues.forEach(function (v) {
+        v = String(v || '').trim();
+        if (v && vals.indexOf(v) === -1) vals.push(v);
+      });
+      vals.sort();
+      sel.innerHTML = '<option value="">' + allLabel + '</option>';
+      vals.forEach(function (v) {
+        var o = document.createElement('option');
+        o.value = v; o.textContent = v; sel.appendChild(o);
+      });
+      sel.value = vals.indexOf(current) === -1 ? '' : current;
+    }
+
+    function viewOf(p) {
+      var author = $('author').value;
+      if (!author) return p;
+      var mine = (p.ratings || []).filter(function (r) {
+        return String(r.author || '').trim() === author;
+      })[0];
+      if (!mine) return null;
+      return {
+        pub: p.pub, area: p.area, lat: p.lat, lng: p.lng, placeId: p.placeId,
+        score: mine.score, cats: mine.cats,
+        ratings: [mine], raters: 1, soloAuthor: author,
+        pubId: p.pubId, groupId: p.groupId
+      };
+    }
+
+    function visiblePubs() {
+      var city = $('city').value;
+      var out = [];
+      PUBS.forEach(function (p) {
+        if (city && cityOf(p.area) !== city) return;
+        var v = viewOf(p);
+        if (v) out.push(v);
+      });
+      return out;
+    }
+
+    function sortKey() { return $('sortBy').value; }
+    function valueFor(p, key) {
+      if (key === 'score') return p.score;
+      return p.cats ? p.cats[key] : null;
+    }
+    function colourForKey(v, key) {
+      if (v == null) return '#cccccc';
+      return colourFor(key === 'score' ? v : v * 2);
+    }
+
+    function renderBoard(list) {
+      var key = sortKey();
+      var body = $('boardBody');
+      body.innerHTML = '';
+      var scored = list.filter(function (p) { return valueFor(p, key) != null; });
+      if (!scored.length) {
+        body.innerHTML = '<tr><td class="none" colspan="4">No pubs match.</td></tr>';
+        return;
+      }
+      scored.slice()
+        .sort(function (a, b) { return valueFor(b, key) - valueFor(a, key); })
+        .forEach(function (p, i) {
+          var v = valueFor(p, key);
+          var tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td class="pos">' + (i + 1) + '</td>' +
+            '<td class="dot"><i style="background:' + colourForKey(v, key) + '"></i></td>' +
+            '<td class="nm" title="' + escapeHtml(p.pub + ' — ' + p.area) + '">' +
+              escapeHtml(p.pub) + '</td>' +
+            '<td class="sc">' + v.toFixed(key === 'score' ? 2 : 1) + '</td>';
+          tr.addEventListener('click', function () { focusPub(p); });
+          body.appendChild(tr);
+        });
+    }
+
+    function focusPub(p) {
+      var hit = null;
+      MARKERS.forEach(function (m) {
+        if ((p.placeId && m.pub.placeId === p.placeId) || m.pub.pub === p.pub) hit = m;
+      });
+      MAP.panTo({ lat: p.lat, lng: p.lng });
+      MAP.setZoom(16);
+      if (hit) {
+        INFO.setContent(infoHtml(p));
+        INFO.open(MAP, hit.marker);
+      }
+      if (isMobile()) $('panel').classList.add('collapsed');
+    }
+
+    function applyFilters() {
+      var shown = visiblePubs();
+      var byKey = {};
+      shown.forEach(function (v) { byKey[v.placeId || v.pub] = v; });
+      MARKERS.forEach(function (m) {
+        var v = byKey[m.pub.placeId || m.pub.pub];
+        m.marker.map = v ? MAP : null;
+        if (v) {
+          m.view = v;
+          m.marker.content = pinFor(v);
+          m.marker.title = v.pub + ' — ' + (v.score == null ? '?' : v.score.toFixed(2));
+        }
+      });
+      if (INFO) INFO.close();
+      renderStats(shown);
+      renderBoard(shown);
+    }
+
+    function zoomToShown() {
+      var shown = visiblePubs();
+      if (!shown.length) return;
+      var b = new google.maps.LatLngBounds();
+      shown.forEach(function (p) { b.extend({ lat: p.lat, lng: p.lng }); });
+      MAP.fitBounds(b, boundsPadding());
+      if (shown.length === 1) MAP.setZoom(15);
+    }
+
+    $('city').addEventListener('change', function () { applyFilters(); zoomToShown(); });
+    $('author').addEventListener('change', function () { applyFilters(); zoomToShown(); });
+    document.querySelector('#panel h1').addEventListener('click', function () {
+      if (isMobile()) $('panel').classList.toggle('collapsed');
+    });
+
+    function updateLegend() {
+      var cat = sortKey() !== 'score';
+      $('scLo').textContent = cat ? '2.0' : '4.0';
+      $('scMid').textContent = cat ? '3.25' : '6.5';
+      $('scHi').textContent = cat ? '4.5' : '9.0';
+    }
+    $('sortBy').addEventListener('change', function () { updateLegend(); applyFilters(); });
+
+    function showError(msg) {
+      var el = $('err');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    // ---------- add-a-pub form ----------
+    (function buildCats() {
+      var box = $('cats');
+      var step = isMobile() ? '0.5' : '0.1';
+      CATS.forEach(function (c) {
+        var row = document.createElement('div');
+        row.className = 'cat';
+        row.innerHTML = '<span>' + c.label + '</span>' +
+          '<input type="range" id="f_' + c.key + '" min="0" max="5" step="' + step + '" value="3">' +
+          '<span class="v" id="v_' + c.key + '">3.0</span>';
+        box.appendChild(row);
+      });
+      CATS.forEach(function (c) {
+        $('f_' + c.key).addEventListener('input', function (e) {
+          $('v_' + c.key).textContent = Number(e.target.value).toFixed(1);
+          updateLive();
+        });
+      });
+      updateLive();
+    })();
+
+    function updateLive() {
+      var total = CATS.reduce(function (a, c) {
+        return a + Number($('f_' + c.key).value);
+      }, 0);
+      var score = total / 25 * 10;
+      var el = $('liveScore');
+      el.textContent = score.toFixed(2);
+      el.style.color = colourFor(score);
+    }
+
+    function toggleForm(open) {
+      $('form').style.display = open ? 'block' : 'none';
+      $('addBtn').style.display = open ? 'none' : 'block';
+      if (open) {
+        $('f_authorName').textContent = PROFILE ? PROFILE.display_name : '—';
+        if (!isMobile()) $('f_pub').focus();
+      }
+    }
+
+    // local preview of the chosen photo (no upload yet)
+    $('f_photo').addEventListener('change', function () {
+      var box = $('f_photoPreview');
+      box.innerHTML = '';
+      var f = this.files && this.files[0];
+      if (!f) return;
+      var img = document.createElement('img');
+      img.style.cssText = 'width:64px;height:64px;object-fit:cover;border-radius:5px';
+      img.src = URL.createObjectURL(f);
+      img.onload = function () { URL.revokeObjectURL(img.src); };
+      box.appendChild(img);
+    });
+
+    function loadUsers() {
+      fetchUsers().then(function () { /* names used only for author filter now */ });
+    }
+
+    $('addBtn').addEventListener('click', function () { toggleForm(true); });
+    $('cancel').addEventListener('click', function () { toggleForm(false); setFormMsg('', ''); });
+
+    function setFormMsg(text, cls) {
+      var el = $('formMsg');
+      el.textContent = text;
+      el.className = cls || '';
+    }
+
+    $('save').addEventListener('click', function () {
+      var btn = this;
+      var payload = {
+        pub: $('f_pub').value.trim(),
+        area: $('f_area').value.trim()
+      };
+      if (!payload.pub) { setFormMsg('Pub name is required.', 'bad'); return; }
+      CATS.forEach(function (c) { payload[c.key] = Number($('f_' + c.key).value); });
+
+      btn.disabled = true;
+      setFormMsg('Locating and saving…', '');
+
+      var file = ($('f_photo').files || [])[0] || null;
+
+      submitPub(payload)
+        .then(function (saved) {
+          // Optional photo: upload after the rating exists (needs pubId).
+          if (!file) return saved;
+          setFormMsg('Uploading photo…', '');
+          var path = photoPath(saved.groupId, saved.pubId, PROFILE.id);
+          return uploadPhoto(path, file)
+            .then(function () { return setRatingPhotoPath(saved.pubId, path); })
+            .then(function () { return saved; })
+            .catch(function (e) {
+              // Rating is saved; only the photo failed. Tell the user, don't lose the rating.
+              setFormMsg('Rating saved, but the photo failed: ' + (e.message || e), 'bad');
+              throw { handled: true };
+            });
+        })
+        .then(function (saved) {
+          btn.disabled = false;
+          setFormMsg('Saved ' + saved.pub + ' — ' +
+                     (saved.score == null ? '?' : saved.score.toFixed(2)), 'good');
+          renderPubs();          // reload group data so averages/pins reflect the new rating
+          loadActivity();
+          $('f_pub').value = '';
+          $('f_area').value = '';
+          $('f_photo').value = '';
+          $('f_photoPreview').innerHTML = '';
+          setTimeout(function () { toggleForm(false); setFormMsg('', ''); }, 1600);
+        })
+        .catch(function (e) {
+          btn.disabled = false;
+          if (e && e.handled) { renderPubs(); return; }  // photo-only failure already messaged
+          setFormMsg(e.message || 'Something went wrong.', 'bad');
+        });
+    });
+
+    // ---------- recent activity ----------
+    function relTime(ms) {
+      if (!ms) return '';
+      var s = (Date.now() - ms) / 1000;
+      if (s < 60) return 'just now';
+      if (s < 3600) return Math.floor(s / 60) + 'm ago';
+      if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+      if (s < 604800) return Math.floor(s / 86400) + 'd ago';
+      return new Date(ms).toLocaleDateString();
+    }
+
+    function renderActivity(items) {
+      var box = $('activityList');
+      box.innerHTML = '';
+      if (!items || !items.length) {
+        box.innerHTML = '<div class="none">Nothing yet.</div>';
+        return;
+      }
+      items.forEach(function (a) {
+        var row = document.createElement('div');
+        row.className = 'act';
+        row.innerHTML =
+          '<i style="background:' + colourFor(a.score) + '"></i>' +
+          '<div class="body">' +
+            '<div class="pub">' + escapeHtml(a.pub) + '</div>' +
+            '<div class="meta">' + escapeHtml(a.author) +
+              (a.ratedAt ? ' · ' + relTime(a.ratedAt) : '') + '</div>' +
+          '</div>' +
+          '<span class="sc" style="color:' + colourFor(a.score) + '">' +
+            (a.score == null ? '—' : a.score.toFixed(1)) + '</span>';
+        row.addEventListener('click', function () {
+          $('activity').classList.remove('open');
+          focusPub(a);
+        });
+        box.appendChild(row);
+      });
+    }
+
+    function loadActivity() {
+      fetchActivity(40).then(renderActivity).catch(function () {});
+    }
+
+    $('activityBtn').addEventListener('click', function () {
+      $('activity').classList.add('open');
+      loadActivity();
+    });
+    $('activityClose').addEventListener('click', function () {
+      $('activity').classList.remove('open');
+    });
+
+    // close the photo lightbox on any click
+    $('lightbox').addEventListener('click', function () {
+      this.classList.remove('open');
+      $('lightboxImg').src = '';
+    });
+
+    // ---------- group switcher inside the map ----------
+    function syncMapGroupBar() {
+      var sel = $('mapGroupSel');
+      sel.innerHTML = '';
+      GROUPS.forEach(function (g) {
+        var o = document.createElement('option');
+        o.value = g.id; o.textContent = g.name; sel.appendChild(o);
+      });
+      sel.value = ACTIVE_GROUP.id;
+      $('mapMe').textContent = PROFILE ? PROFILE.display_name : '';
+    }
+    $('mapGroupSel').addEventListener('change', function () {
+      var g = GROUPS.find(function (x) { return x.id === $('mapGroupSel').value; });
+      if (!g) return;
+      ACTIVE_GROUP = { id: g.id, name: g.name };
+      renderPubs();
+    });
+
+    // ---------- Maps JS loader (one-time) ----------
+    function loadGoogleMaps() {
+      return new Promise(function (resolve, reject) {
+        if (MAPS_LOADED) { resolve(); return; }
+        if (MAPS_BROWSER_KEY === 'PASTE_MAPS_BROWSER_KEY_HERE') {
+          reject(new Error('Set MAPS_BROWSER_KEY in the page config.'));
+          return;
+        }
+        window.__initMap = function () { MAPS_LOADED = true; resolve(); };
+        var s = document.createElement('script');
+        s.src = 'https://maps.googleapis.com/maps/api/js?key=' + MAPS_BROWSER_KEY +
+                '&v=weekly&libraries=marker&callback=__initMap';
+        s.async = true;
+        s.onerror = function () { reject(new Error('Google Maps failed to load — check the key and its referrer restrictions.')); };
+        document.head.appendChild(s);
+      });
+    }
+
+    // ---------- enter the map from the gate ----------
+    async function enterApp() {
+      document.body.className = 'app';
+      $('gate').classList.add('hidden');
+      $('app').classList.remove('hidden');
+      syncMapGroupBar();
+      try {
+        await loadGoogleMaps();
+        if (!MAP) await initMap();
+        else await renderPubs();
+      } catch (e) {
+        showError(e.message || 'Could not start the map.');
+      }
+    }
+
+    // ---------- boot ----------
+    sb.auth.onAuthStateChange(() => route());
+    route();
+  </script>
+</body>
+</html>
