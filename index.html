@@ -4,6 +4,35 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>PlotMyPub</title>
+  <meta name="description" content="Rate pubs with your friends and see them on a map.">
+
+  <!-- ---------- PWA (Phase 7.5) ---------- -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#2F4F4F">
+
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PlotMyPub">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <!-- ---------- social preview ---------- -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PlotMyPub">
+  <meta property="og:title" content="PlotMyPub">
+  <meta property="og:description" content="Rate pubs with your friends and see them on a map.">
+  <meta property="og:url" content="https://plotmypub.com/">
+  <meta property="og:image" content="https://plotmypub.com/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="PlotMyPub">
+  <meta name="twitter:description" content="Rate pubs with your friends and see them on a map.">
+  <meta name="twitter:image" content="https://plotmypub.com/og-image.png">
+
   <style>
     :root{
       --slate:#2F4F4F; --slate-d:#243c3c; --ink:#14213d;
@@ -1413,6 +1442,33 @@
     // ---------- boot ----------
     sb.auth.onAuthStateChange(() => route());
     route();
+  </script>
+
+  <!-- ---------- service worker (Phase 7.5) ---------- -->
+  <script>
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').then(function (reg) {
+          // A new version is waiting -> activate it, then reload once.
+          reg.addEventListener('updatefound', function () {
+            var sw = reg.installing;
+            if (!sw) return;
+            sw.addEventListener('statechange', function () {
+              if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+                sw.postMessage('SKIP_WAITING');
+              }
+            });
+          });
+        }).catch(function () { /* SW is a nicety; ignore failures */ });
+
+        var reloading = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+          if (reloading) return;
+          reloading = true;
+          location.reload();
+        });
+      });
+    }
   </script>
 </body>
 </html>
