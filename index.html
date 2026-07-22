@@ -227,7 +227,11 @@
     .um-danger { color: var(--bad); }
     #mapCreateBox input {
       width: 100%; box-sizing: border-box; padding: 9px 10px; margin: 6px 0 0;
-      font-size: 14px; border: 1px solid #ccc; border-radius: 8px; font-family: inherit;
+      font-size: 14px; border: 1px solid var(--line); border-radius: 8px; font-family: inherit;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    #mapCreateBox input:focus-visible {
+      outline: none; border-color: var(--slate); box-shadow: 0 0 0 3px rgba(47,79,79,.15);
     }
     .um-primary {
       width: 100%; margin-top: 8px; padding: 10px; border: 0; border-radius: 8px;
@@ -376,6 +380,23 @@
     }
     #city:focus-visible, #author:focus-visible, #sortBy:focus-visible {
       outline: 2px solid var(--slate); outline-offset: 1px; border-color: var(--slate);
+    }
+
+    /* modern select treatment — strip native OS chrome, add a custom caret so every
+       dropdown matches the app instead of the operating system. Placed after the
+       per-context rules so each select keeps its own size/padding. */
+    .inner select, #userMenu select#mapGroupSel, #city, #author, #sortBy {
+      -webkit-appearance: none; -moz-appearance: none; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%236b7280' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5 6 8 9.5 4.5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 11px center; background-size: 12px;
+      padding-right: 32px; border-color: var(--line); cursor: pointer;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .inner select:hover, #userMenu select#mapGroupSel:hover,
+    #city:hover, #author:hover, #sortBy:hover { border-color: var(--slate); }
+    .inner select:focus-visible, #userMenu select#mapGroupSel:focus-visible,
+    #city:focus-visible, #author:focus-visible, #sortBy:focus-visible {
+      outline: none; border-color: var(--slate); box-shadow: 0 0 0 3px rgba(47,79,79,.15);
     }
     #board table { border-collapse: collapse; width: 100%; font-size: 13px; }
     #board td { padding: 6px 2px; border-bottom: 1px solid #f2f2f0; vertical-align: middle; }
