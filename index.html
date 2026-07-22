@@ -104,12 +104,15 @@
 
     /* ---------- loading splash (live drifting map + animated brand) ---------- */
     #gate{ position:relative; z-index:1 }
-    #loadmap{ display:none }
-    body.is-loading #loadmap{
+    #loadmap{ display:none; opacity:0; transition:opacity .8s ease }
+    /* the map lives for the whole gate so it has a visible, sized container to
+       render into — the loading flash alone is too brief for tiles to load */
+    body.gate #loadmap{
       display:block; position:fixed; inset:0; z-index:0; background:var(--bg);
     }
+    body.gate #loadmap.ready{ opacity:1 }
     /* soft scrim so the card stays readable over the map */
-    body.is-loading #loadmap::after{
+    body.gate #loadmap::after{
       content:""; position:absolute; inset:0; pointer-events:none;
       background:radial-gradient(120% 90% at 50% 45%, rgba(255,255,255,.08), rgba(0,0,0,.28));
     }
@@ -1947,8 +1950,12 @@
     async function startLoadMap() {
       try {
         await loadGoogleMaps();
+        // Auth may have already dropped us into the app while Maps JS loaded —
+        // the container is hidden now, so don't build a map we'll never show.
+        if (document.body.classList.contains('app')) return;
         const { Map } = await google.maps.importLibrary('maps');
-        BG_MAP = new Map(document.getElementById('loadmap'), {
+        var el = document.getElementById('loadmap');
+        BG_MAP = new Map(el, {
           mapId: 'DEMO_MAP_ID',
           center: { lat: 52.2, lng: -1.5 },   // same view the app opens on
           zoom: 6,
@@ -1957,13 +1964,17 @@
           keyboardShortcuts: false,
           clickableIcons: false
         });
+        // fade in only once real tiles have painted (avoids a grey flash)
+        google.maps.event.addListenerOnce(BG_MAP, 'tilesloaded', function () {
+          el.classList.add('ready');
+        });
         BG_RAF = requestAnimationFrame(driftLoadMap);
       } catch (e) { /* splash map is a nicety; ignore failures */ }
     }
     var REDUCE_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     function driftLoadMap() {
       BG_RAF = requestAnimationFrame(driftLoadMap);
-      if (REDUCE_MOTION || !BG_MAP || !document.body.classList.contains('is-loading')) return;
+      if (REDUCE_MOTION || !BG_MAP || !document.body.classList.contains('gate')) return;
       BG_ANGLE += 0.002;   // ~50s per lap — a gentle, slow drift around the app view
       BG_MAP.setCenter({
         lat: 52.2 + Math.sin(BG_ANGLE) * 0.35,
