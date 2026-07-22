@@ -141,6 +141,15 @@
     .iw .brk span { color: #555; }
     .iw .brk b { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; }
     .iw .by { color: #777; font-size: 11px; font-style: italic; margin-bottom: 4px; }
+    .iw .notes { margin: 6px 0 2px; }
+    .iw .note { font-size: 12px; color: #444; line-height: 1.45; margin: 2px 0; }
+    .iw .note b { font-size: 12px; color: #222; }
+    #form textarea {
+      width: 100%; box-sizing: border-box; padding: 8px; font-size: 13px;
+      border: 1px solid #ccc; border-radius: 4px; font-family: inherit;
+      resize: vertical;
+    }
+    .noteCount { font-size: 11px; color: #999; text-align: right; margin-top: 2px; }
     .iw .shots { display: flex; gap: 4px; margin: 6px 0 2px; flex-wrap: wrap; }
     .iw .shots figure { margin: 0; }
     .iw .shots img {
@@ -301,7 +310,7 @@
         border-radius: 0; overflow-y: auto;
         padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
       }
-      #form input[type=text], #city, #author, #sortBy { font-size: 16px; padding: 10px 8px; }
+      #form input[type=text], #form textarea, #city, #author, #sortBy { font-size: 16px; padding: 10px 8px; }
       .cat { margin: 12px 0; }
       .cat input[type=range] { height: 28px; }
       .pin { width: 40px; height: 40px; font-size: 13px; }
@@ -459,6 +468,11 @@
 
       <label style="margin-top:10px">Scores (0–5)</label>
       <div id="cats"></div>
+
+      <label for="f_note" style="margin-top:10px">Note <span style="color:#999">(optional)</span></label>
+      <textarea id="f_note" maxlength="200" rows="2"
+                placeholder="Cracking Guinness, dreadful loos."></textarea>
+      <div id="f_noteCount" class="noteCount">200 left</div>
 
       <label for="f_photo" style="margin-top:10px">Photo <span style="color:#999">(optional)</span></label>
       <input id="f_photo" type="file" accept="image/*" style="font-size:12px">
@@ -674,7 +688,7 @@
       const [scoresRes, ratingsRes] = await Promise.all([
         sb.from('pub_scores').select('*').eq('group_id', gid),
         sb.from('ratings')
-          .select('location,beer,value,facilities,vibe,photo_path,profile_id,pubs!inner(id,name,area,lat,lng,place_id,group_id),profiles!inner(display_name)')
+          .select('location,beer,value,facilities,vibe,note,photo_path,profile_id,pubs!inner(id,name,area,lat,lng,place_id,group_id),profiles!inner(display_name)')
           .eq('group_id', gid)
       ]);
       if (scoresRes.error) throw scoresRes.error;
@@ -717,7 +731,9 @@
         g.ratings.push({
           author: r.profiles ? r.profiles.display_name : '—',
           profileId: r.profile_id,
-          score: catScore, cats, photoPath: r.photo_path || null
+          score: catScore, cats,
+          note: (r.note || '').trim() || null,
+          photoPath: r.photo_path || null
         });
       });
 
@@ -775,7 +791,8 @@
         .upsert({
           pub_id: pubRow.id, group_id: gid, profile_id: PROFILE.id,
           location: payload.location, beer: payload.beer, value: payload.value,
-          facilities: payload.facilities, vibe: payload.vibe
+          facilities: payload.facilities, vibe: payload.vibe,
+          note: payload.note || null
         }, { onConflict: 'pub_id,profile_id' });
       if (ratErr) throw ratErr;
 
@@ -925,6 +942,19 @@
         by = '<div class="by">rated by ' + escapeHtml(p.ratings[0].author) + '</div>';
       }
 
+      // Notes: one short line per rater who wrote one. In solo view the
+      // author is already named above, so just show the text.
+      var notes = '';
+      var withNotes = (p.ratings || []).filter(function (r) { return r.note; });
+      if (withNotes.length) {
+        notes = '<div class="notes">' + withNotes.map(function (r) {
+          return '<div class="note">' +
+            (p.soloAuthor ? '' : '<b>' + escapeHtml(r.author) + '</b> ') +
+            escapeHtml(r.note) +
+          '</div>';
+        }).join('') + '</div>';
+      }
+
       // Photo strip: solo view -> that author's one photo; average view ->
       // one thumb per rater who has one. Slots fill in async after open.
       var shots = '';
@@ -957,7 +987,7 @@
              '<span class="sc" style="color:' + colourFor(p.score) + '">' +
              (p.score == null ? '—' : p.score.toFixed(2)) + '</span>' +
              '<span style="color:#777"> / 10</span>' +
-             breakdown + by + shots + myPhoto + link + '</div>';
+             breakdown + by + notes + shots + myPhoto + link + '</div>';
     }
 
     /** After an info-window renders, swap each photo slot's data-photo path
@@ -1289,6 +1319,14 @@
       }
     }
 
+    // live "N left" counter under the note box
+    function updateNoteCount() {
+      var el = $('f_note');
+      $('f_noteCount').textContent = (el.maxLength - el.value.length) + ' left';
+    }
+    $('f_note').addEventListener('input', updateNoteCount);
+    updateNoteCount();
+
     // local preview of the chosen photo (no upload yet)
     $('f_photo').addEventListener('change', function () {
       var box = $('f_photoPreview');
@@ -1319,7 +1357,8 @@
       var btn = this;
       var payload = {
         pub: $('f_pub').value.trim(),
-        area: $('f_area').value.trim()
+        area: $('f_area').value.trim(),
+        note: $('f_note').value.trim()
       };
       if (!payload.pub) { setFormMsg('Pub name is required.', 'bad'); return; }
       CATS.forEach(function (c) { payload[c.key] = Number($('f_' + c.key).value); });
@@ -1352,6 +1391,8 @@
           loadActivity();
           $('f_pub').value = '';
           $('f_area').value = '';
+          $('f_note').value = '';
+          updateNoteCount();
           $('f_photo').value = '';
           $('f_photoPreview').innerHTML = '';
           setTimeout(function () { toggleForm(false); setFormMsg('', ''); }, 1600);
