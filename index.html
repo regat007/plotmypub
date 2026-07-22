@@ -102,20 +102,9 @@
     .hidden{display:none}
     .spin{color:var(--muted); font-size:13px; text-align:center; padding:10px 0}
 
-    /* ---------- loading splash (live drifting map + animated brand) ---------- */
-    #gate{ position:relative; z-index:1 }
-    #loadmap{ display:none; opacity:0; transition:opacity .8s ease }
-    /* the map lives for the whole gate so it has a visible, sized container to
-       render into — the loading flash alone is too brief for tiles to load */
-    body.gate #loadmap{
-      display:block; position:fixed; inset:0; z-index:0; background:var(--bg);
-    }
-    body.gate #loadmap.ready{ opacity:1 }
-    /* soft scrim so the card stays readable over the map */
-    body.gate #loadmap::after{
-      content:""; position:absolute; inset:0; pointer-events:none;
-      background:radial-gradient(120% 90% at 50% 45%, rgba(255,255,255,.08), rgba(0,0,0,.28));
-    }
+    /* ---------- loading splash (animated brand, no live map) ---------- */
+    /* subtle static backdrop for depth — cheap, no Maps API on the gate */
+    body.gate{ background:radial-gradient(120% 90% at 50% 40%, #ffffff, var(--bg)); }
     /* bigger, centred brand while loading */
     body.is-loading .inner{ text-align:center }
     body.is-loading #gate h1{
@@ -511,9 +500,6 @@
   </style>
 </head>
 <body class="gate is-loading">
-
-  <!-- slowly-drifting live map behind the loading splash -->
-  <div id="loadmap" aria-hidden="true"></div>
 
   <!-- ============ AUTH / GATE (Phase 3 shell, unchanged) ============ -->
   <div class="card" id="gate">
@@ -1952,45 +1938,8 @@
       }
     }
 
-    // ---------- loading-splash background map (slow drift) ----------
-    var BG_MAP = null, BG_RAF = 0, BG_ANGLE = 0;
-    async function startLoadMap() {
-      try {
-        await loadGoogleMaps();
-        // Auth may have already dropped us into the app while Maps JS loaded —
-        // the container is hidden now, so don't build a map we'll never show.
-        if (document.body.classList.contains('app')) return;
-        const { Map } = await google.maps.importLibrary('maps');
-        var el = document.getElementById('loadmap');
-        BG_MAP = new Map(el, {
-          mapId: 'DEMO_MAP_ID',
-          center: { lat: 52.2, lng: -1.5 },   // same view the app opens on
-          zoom: 6,
-          disableDefaultUI: true,
-          gestureHandling: 'none',
-          keyboardShortcuts: false,
-          clickableIcons: false
-        });
-        // fade in only once real tiles have painted (avoids a grey flash)
-        google.maps.event.addListenerOnce(BG_MAP, 'tilesloaded', function () {
-          el.classList.add('ready');
-        });
-        BG_RAF = requestAnimationFrame(driftLoadMap);
-      } catch (e) { /* splash map is a nicety; ignore failures */ }
-    }
-    var REDUCE_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    function driftLoadMap() {
-      BG_RAF = requestAnimationFrame(driftLoadMap);
-      if (REDUCE_MOTION || !BG_MAP || !document.body.classList.contains('gate')) return;
-      BG_ANGLE += 0.002;   // ~50s per lap — a gentle, slow drift around the app view
-      BG_MAP.setCenter({
-        lat: 52.2 + Math.sin(BG_ANGLE) * 0.35,
-        lng: -1.5 + Math.cos(BG_ANGLE) * 0.6
-      });
-    }
-
     // ---------- boot ----------
-    startLoadMap();
+    // Maps JS is no longer loaded on the gate — it boots on demand in enterApp().
     sb.auth.onAuthStateChange(() => route());
     route();
   </script>
