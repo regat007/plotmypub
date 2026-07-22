@@ -1146,9 +1146,9 @@
     // ---------- colour ramp (unchanged from page.html) ----------
     function colourFor(score) {
       var stops = [
-        { at: 4.0, rgb: [248, 105, 107] },
-        { at: 6.5, rgb: [255, 235, 132] },
-        { at: 9.0, rgb: [99, 190, 123] }
+        { at: 0,  rgb: [248, 105, 107] },
+        { at: 5,  rgb: [255, 235, 132] },
+        { at: 10, rgb: [99, 190, 123] }
       ];
       if (score == null) return '#cccccc';
       var s = Math.max(stops[0].at, Math.min(stops[2].at, score));
