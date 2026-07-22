@@ -108,18 +108,24 @@
 
     #panel {
       position: absolute; top: 12px; left: 12px; z-index: 5;
-      background: rgba(255,255,255,.96); border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,.25);
-      padding: 12px 14px; min-width: 190px; font-size: 13px;
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.16);
+      padding: 14px 16px; min-width: 220px; font-size: 13px; color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       max-height: calc(100vh - 24px); overflow-y: auto;
     }
-    #panel h1 { margin: 0 0 8px; font-size: 15px; letter-spacing: .02em; }
-    #panel .stat-row { display: flex; justify-content: space-between; gap: 14px; margin: 3px 0; }
-    #panel .stat-row b { font-variant-numeric: tabular-nums; }
+    #dragHandle { display: none; }
+    #panel h1 { margin: 0 0 12px; font-size: 15px; letter-spacing: .01em; }
 
-    .scale { display: flex; height: 9px; border-radius: 5px; overflow: hidden; margin: 10px 0 4px; }
+    .stats { display: flex; gap: 8px; margin: 0 0 12px; }
+    .stat-tile { flex: 1; background: var(--bg); border-radius: 10px; padding: 8px 6px; text-align: center; }
+    .stat-tile b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .stat-tile span { display: block; font-size: 10px; text-transform: uppercase;
+                      letter-spacing: .05em; color: var(--muted); margin-top: 3px; }
+
+    .scale { display: flex; height: 8px; border-radius: 5px; overflow: hidden; margin: 2px 0 4px; }
     .scale span { flex: 1; }
-    .scale-ends { display: flex; justify-content: space-between; font-size: 11px; color: #555; }
+    .scale-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
 
     .pin {
       display: flex; align-items: center; justify-content: center;
@@ -145,10 +151,11 @@
     .iw .note { font-size: 12px; color: #444; line-height: 1.45; margin: 2px 0; }
     .iw .note b { font-size: 12px; color: #222; }
     #form textarea {
-      width: 100%; box-sizing: border-box; padding: 8px; font-size: 13px;
-      border: 1px solid #ccc; border-radius: 4px; font-family: inherit;
+      width: 100%; box-sizing: border-box; padding: 10px 11px; font-size: 14px;
+      border: 1px solid #ccc; border-radius: 8px; font-family: inherit;
       resize: vertical;
     }
+    #form textarea:focus-visible { outline: 2px solid var(--slate); outline-offset: 1px; border-color: var(--slate); }
     .noteCount { font-size: 11px; color: #999; text-align: right; margin-top: 2px; }
     .iw .shots { display: flex; gap: 4px; margin: 6px 0 2px; flex-wrap: wrap; }
     .iw .shots figure { margin: 0; }
@@ -172,89 +179,205 @@
       padding: 8px 12px; font-size: 13px; display: none; max-width: 320px;
     }
 
-    /* group switcher, top-centre */
-    #groupBar {
-      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-      z-index: 5; background: rgba(255,255,255,.96); border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.25); padding: 6px 8px;
-      display: flex; align-items: center; gap: 8px; font-size: 13px;
+    /* account + groups avatar menu, top-left */
+    #userBar {
+      position: absolute; top: 12px; left: 12px; z-index: 8;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
-    #groupBar select {
-      border: 1px solid #ccc; border-radius: 5px; padding: 5px 6px;
-      font-family: Arial, sans-serif; font-size: 13px; background: #fff;
+    #avatarBtn {
+      width: 44px; height: 44px; border-radius: 50%; border: 2px solid #fff;
+      background: var(--slate); color: #fff; font-weight: bold; font-size: 15px;
+      cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.28);
+      display: flex; align-items: center; justify-content: center;
+      font-family: inherit; font-variant-numeric: tabular-nums; letter-spacing: .02em;
     }
-    #groupBar .me { color: #777; font-size: 12px; }
-    #groupBar button {
-      background: none; border: 0; color: var(--slate); cursor: pointer;
-      font-size: 12px; font-family: Arial, sans-serif; text-decoration: underline;
-      padding: 0;
+    #avatarBtn:hover { background: var(--slate-d); }
+    #userMenu {
+      position: absolute; top: 52px; left: 0; width: 250px; max-width: calc(100vw - 24px);
+      background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.24);
+      padding: 8px; font-size: 13px; color: var(--ink);
     }
+    .um-head {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 8px 12px; border-bottom: 1px solid var(--line); margin-bottom: 8px;
+    }
+    #avatarLarge {
+      width: 38px; height: 38px; border-radius: 50%; background: var(--slate); color: #fff;
+      display: flex; align-items: center; justify-content: center; font-weight: bold;
+      font-size: 14px; flex: 0 0 auto; font-variant-numeric: tabular-nums;
+    }
+    .um-id { min-width: 0; }
+    .um-name { font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .um-sub { color: var(--muted); font-size: 11px; }
+    .um-sec { padding: 4px 4px 8px; }
+    .um-label {
+      display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--muted); font-weight: bold; margin: 0 0 5px;
+    }
+    #userMenu select#mapGroupSel {
+      width: 100%; padding: 9px 10px; font-size: 14px; border: 1px solid #ccc;
+      border-radius: 8px; font-family: inherit; background: #fff;
+    }
+    .um-item {
+      display: block; width: 100%; text-align: left; background: none; border: 0;
+      border-radius: 8px; padding: 10px; font-size: 14px; font-family: inherit;
+      color: var(--ink); cursor: pointer;
+    }
+    .um-item:hover { background: #f3f3f1; }
+    .um-danger { color: var(--bad); }
+    #mapCreateBox input {
+      width: 100%; box-sizing: border-box; padding: 9px 10px; margin: 6px 0 0;
+      font-size: 14px; border: 1px solid #ccc; border-radius: 8px; font-family: inherit;
+    }
+    .um-primary {
+      width: 100%; margin-top: 8px; padding: 10px; border: 0; border-radius: 8px;
+      background: var(--slate); color: #fff; font-weight: bold; font-size: 14px;
+      font-family: inherit; cursor: pointer;
+    }
+    .um-primary:hover { background: var(--slate-d); }
+    .um-primary:disabled { background: #9aa5a5; cursor: default; }
+    .um-msg { font-size: 12px; min-height: 14px; margin-top: 6px; }
+    .um-msg.bad { color: var(--bad); }
+    .um-msg.good { color: var(--good); }
 
     /* add-a-pub */
-    #addBtn {
+    #fabs {
       position: absolute; top: 12px; right: 12px; z-index: 5;
-      background: #2F4F4F; color: #fff; border: 0; cursor: pointer;
-      border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: bold;
-      font-family: Arial, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+      display: flex; flex-direction: row-reverse; align-items: flex-start; gap: 10px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
+    #addBtn, #activityBtn {
+      cursor: pointer; border-radius: 24px; padding: 11px 18px; font-size: 14px;
+      font-weight: bold; font-family: inherit; white-space: nowrap;
+    }
+    #addBtn {
+      background: var(--slate); color: #fff; border: 0;
+      box-shadow: 0 4px 14px rgba(0,0,0,.26);
+    }
+    #addBtn:hover { background: var(--slate-d); }
     #form {
       position: absolute; top: 12px; right: 12px; z-index: 6; display: none;
-      background: rgba(255,255,255,.98); border-radius: 8px; width: 250px;
-      box-shadow: 0 2px 14px rgba(0,0,0,.3); padding: 14px; font-size: 13px;
+      flex-direction: column;
+      background: #fff; border-radius: 12px; width: 320px;
+      box-shadow: 0 10px 34px rgba(0,0,0,.28); font-size: 13px; color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-height: calc(100vh - 24px);
     }
-    #form h2 { margin: 0 0 10px; font-size: 14px; }
-    #form label { display: block; margin: 8px 0 2px; color: #444; font-size: 12px; }
+    #formHead {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px; border-bottom: 1px solid var(--line); flex: 0 0 auto;
+    }
+    #formHead h2 { margin: 0; font-size: 16px; letter-spacing: .01em; }
+    #formClose {
+      background: none; border: 0; width: auto; padding: 0 2px;
+      font-size: 26px; line-height: 1; color: var(--muted); cursor: pointer;
+    }
+    #formClose:hover { color: var(--ink); }
+    #formBody { padding: 16px; overflow-y: auto; flex: 1 1 auto; }
+
+    .fsec { margin: 0 0 18px; }
+    .fsec:last-child { margin-bottom: 0; }
+    .fsec-title {
+      font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
+      color: var(--muted); font-weight: bold; margin: 0 0 10px;
+    }
+    #form label { display: block; margin: 12px 0 5px; color: #444; font-size: 12px; }
+    .fsec > label:first-child { margin-top: 0; }
     #form input[type=text] {
-      width: 100%; box-sizing: border-box; padding: 6px 8px; font-size: 13px;
-      border: 1px solid #ccc; border-radius: 4px; font-family: Arial, sans-serif;
+      width: 100%; box-sizing: border-box; padding: 10px 11px; font-size: 14px;
+      border: 1px solid #ccc; border-radius: 8px; font-family: inherit;
     }
-    .cat { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
-    .cat span:first-child { flex: 1; font-size: 12px; color: #444; }
-    .cat input[type=range] { flex: 1.3; }
-    .cat .v { width: 24px; text-align: right; font-weight: bold; font-variant-numeric: tabular-nums; }
-    #formWho { font-size: 12px; color: #555; margin: 2px 0 4px; }
+    #form input[type=text]:focus-visible {
+      outline: 2px solid var(--slate); outline-offset: 1px; border-color: var(--slate);
+    }
+    #formWho {
+      font-size: 12px; color: #555; margin: 0 0 4px;
+      background: #f3f4f2; border-radius: 8px; padding: 8px 10px;
+    }
     #formWho b { color: var(--ink); }
-    #formBtns { display: flex; gap: 8px; margin-top: 12px; }
-    #formBtns button {
-      flex: 1; padding: 8px; border-radius: 5px; cursor: pointer;
-      font-size: 13px; font-family: Arial, sans-serif;
+
+    /* score sliders — coloured live-fill + value chip */
+    .cat { display: grid; grid-template-columns: 1fr auto; align-items: center;
+           gap: 6px 10px; margin: 0 0 16px; }
+    .cat:last-child { margin-bottom: 0; }
+    .cat .lab { font-size: 13px; color: #333; }
+    .cat .v {
+      justify-self: end; min-width: 40px; text-align: center;
+      font-weight: bold; font-variant-numeric: tabular-nums; font-size: 13px;
+      color: var(--ink); background: var(--muted); border-radius: 6px; padding: 2px 6px;
     }
-    #save { background: #2F4F4F; color: #fff; border: 0; font-weight: bold; }
-    #save:disabled { background: #999; cursor: default; }
-    #cancel { background: #fff; border: 1px solid #ccc; }
-    #formMsg { margin-top: 8px; font-size: 12px; min-height: 15px; }
+    .cat input[type=range] {
+      grid-column: 1 / -1; width: 100%; margin: 3px 0 0;
+      -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer;
+      --pct: 60; --cc: var(--muted);
+    }
+    .cat input[type=range]::-webkit-slider-runnable-track {
+      height: 8px; border-radius: 6px;
+      background: linear-gradient(to right,
+        var(--cc) calc(var(--pct) * 1%), #e3e3e0 calc(var(--pct) * 1%));
+    }
+    .cat input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none; margin-top: -7px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #fff; border: 2px solid var(--slate); box-shadow: 0 1px 3px rgba(0,0,0,.3);
+    }
+    .cat input[type=range]::-moz-range-track { height: 8px; border-radius: 6px; background: #e3e3e0; }
+    .cat input[type=range]::-moz-range-progress { height: 8px; border-radius: 6px; background: var(--cc); }
+    .cat input[type=range]::-moz-range-thumb {
+      width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--slate);
+      background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+    }
+
+    #formFoot {
+      flex: 0 0 auto; padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line); background: #fff; border-radius: 0 0 12px 12px;
+    }
+    #live { display: flex; align-items: center; justify-content: space-between; margin: 0 0 10px; }
+    #live span { color: var(--muted); font-size: 12px; }
+    #live b { font-size: 22px; font-variant-numeric: tabular-nums; }
+    #formBtns { display: flex; gap: 10px; }
+    #formBtns button {
+      padding: 12px; border-radius: 8px; cursor: pointer;
+      font-size: 15px; font-family: inherit; font-weight: bold; border: 0;
+    }
+    #save { flex: 1; background: var(--slate); color: #fff; }
+    #save:hover { background: var(--slate-d); }
+    #save:disabled { background: #9aa5a5; cursor: default; }
+    #cancel { flex: 0 0 auto; padding: 12px 18px; background: #fff;
+              border: 1px solid #ccc; color: var(--ink); font-weight: normal; }
+    #cancel:hover { background: #f3f3f1; }
+    #formMsg { margin-top: 8px; font-size: 12px; min-height: 15px; text-align: center; }
     #formMsg.bad { color: #b3261e; }
     #formMsg.good { color: #0F6E56; }
-    #live { margin-top: 10px; padding-top: 8px; border-top: 1px solid #eee;
-            display: flex; justify-content: space-between; font-size: 12px; }
-    #live b { font-size: 15px; font-variant-numeric: tabular-nums; }
 
     /* leaderboard */
-    #board { margin-top: 12px; padding-top: 10px; border-top: 1px solid #ddd; }
-    #board h2 { margin: 0 0 8px; font-size: 13px; letter-spacing: .02em; }
+    #board { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+    #board h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: .01em; }
+    .board-filters { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
     #city, #author, #sortBy {
-      width: 100%; padding: 5px 6px; font-size: 12px; margin-bottom: 6px;
-      border: 1px solid #ccc; border-radius: 4px; font-family: Arial, sans-serif;
+      width: 100%; padding: 8px 10px; font-size: 13px;
+      border: 1px solid #ccc; border-radius: 8px; font-family: inherit; background: #fff;
     }
-    #sortBy { margin-bottom: 8px; }
-    #board table { border-collapse: collapse; width: 100%; font-size: 12px; }
-    #board td { padding: 3px 2px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    #city:focus-visible, #author:focus-visible, #sortBy:focus-visible {
+      outline: 2px solid var(--slate); outline-offset: 1px; border-color: var(--slate);
+    }
+    #board table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    #board td { padding: 6px 2px; border-bottom: 1px solid #f2f2f0; vertical-align: middle; }
     #board tr { cursor: pointer; }
-    #board tr:hover td { background: #f5f5f5; }
-    #board .pos { width: 16px; color: #888; font-variant-numeric: tabular-nums; }
-    #board .nm { max-width: 108px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #board .sc { text-align: right; font-weight: bold; font-variant-numeric: tabular-nums; width: 34px; }
-    #board .dot { width: 8px; }
-    #board .dot i { display: block; width: 8px; height: 8px; border-radius: 50%; }
-    #board .none { color: #888; font-style: italic; padding: 6px 0; }
+    #board tr:hover td { background: var(--bg); }
+    #board .pos { width: 20px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    #board .nm { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #board .sc { text-align: right; font-weight: bold; font-variant-numeric: tabular-nums; width: 38px; }
+    #board .dot { width: 14px; }
+    #board .dot i { display: block; width: 10px; height: 10px; border-radius: 50%; }
+    #board .none { color: var(--muted); font-style: italic; padding: 8px 0; }
 
     /* recent activity */
     #activityBtn {
-      position: absolute; top: 12px; right: 130px; z-index: 5;
-      background: #fff; color: #2F4F4F; border: 1px solid #2F4F4F; cursor: pointer;
-      border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: bold;
-      font-family: Arial, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+      background: #fff; color: var(--slate); border: 1px solid var(--line);
+      box-shadow: 0 4px 14px rgba(0,0,0,.14);
     }
+    #activityBtn:hover { background: #f3f3f1; }
     #activity {
       position: absolute; top: 0; right: 0; bottom: 0; width: 300px; z-index: 7;
       background: rgba(255,255,255,.98); box-shadow: -2px 0 14px rgba(0,0,0,.25);
@@ -288,37 +411,50 @@
     @media (max-width: 640px) {
       #panel {
         top: auto; bottom: 0; left: 0; right: 0;
-        border-radius: 12px 12px 0 0;
+        border-radius: 16px 16px 0 0;
         max-height: 45vh; min-width: 0;
-        padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+        padding: 4px 16px calc(14px + env(safe-area-inset-bottom));
+        box-shadow: 0 -4px 24px rgba(0,0,0,.18);
         transition: max-height .2s ease;
       }
-      #panel.collapsed { max-height: 46px; overflow: hidden; }
-      #panel h1 { cursor: pointer; position: relative; }
+      #panel.collapsed { max-height: 58px; overflow: hidden; }
+      #dragHandle {
+        display: block; width: 36px; height: 4px; border-radius: 2px;
+        background: #d5d5d0; margin: 8px auto 2px; cursor: pointer;
+      }
+      #panel h1 { cursor: pointer; position: relative; margin: 4px 0 12px; }
       #panel h1::after {
         content: '▾'; position: absolute; right: 0; top: 0;
-        transition: transform .2s;
+        transition: transform .2s; color: var(--muted);
       }
       #panel.collapsed h1::after { transform: rotate(180deg); }
-      #panel .stat-row { display: inline-flex; margin-right: 12px; gap: 6px; }
 
-      #groupBar { top: 8px; left: 8px; transform: none; }
-      #addBtn { top: auto; bottom: calc(50vh + 8px); right: 12px; padding: 12px 18px; }
+      #fabs {
+        top: auto; bottom: calc(45vh + 12px); right: 12px;
+        flex-direction: column-reverse; align-items: flex-end;
+        transition: bottom .2s ease;
+      }
+      #panel.collapsed ~ #fabs { bottom: calc(70px + env(safe-area-inset-bottom)); }
+      #addBtn, #activityBtn { padding: 13px 20px; font-size: 15px; box-shadow: 0 4px 16px rgba(0,0,0,.3); }
 
       #form {
         top: 0; left: 0; right: 0; bottom: 0; width: auto;
-        border-radius: 0; overflow-y: auto;
-        padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+        border-radius: 0; max-height: none;
       }
-      #form input[type=text], #form textarea, #city, #author, #sortBy { font-size: 16px; padding: 10px 8px; }
-      .cat { margin: 12px 0; }
-      .cat input[type=range] { height: 28px; }
+      #formHead { padding: calc(14px + env(safe-area-inset-top)) 16px 14px; }
+      #formFoot { border-radius: 0; }
+      #form input[type=text], #form textarea, #city, #author, #sortBy { font-size: 16px; }
+      #form input[type=text] { padding: 12px; }
+      .cat { margin: 0 0 22px; }
+      .cat input[type=range] { touch-action: none; }
+      .cat input[type=range]::-webkit-slider-thumb { width: 30px; height: 30px; margin-top: -11px; }
+      .cat input[type=range]::-webkit-slider-runnable-track { height: 8px; }
+      .cat input[type=range]::-moz-range-thumb { width: 30px; height: 30px; }
       .pin { width: 40px; height: 40px; font-size: 13px; }
       #board td { padding: 8px 2px; }
       #board .nm { max-width: none; }
       #formBtns button { padding: 12px; font-size: 15px; }
       #err { bottom: auto; top: 12px; left: 12px; right: 12px; }
-      #activityBtn { top: auto; bottom: calc(50vh + 8px); right: 130px; padding: 12px 16px; }
       #activity {
         top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 70vh;
         border-radius: 12px 12px 0 0; transform: translateY(100%);
@@ -421,10 +557,13 @@
   <!-- ============ MAP APP (ported from page.html) ============ -->
   <div id="app" class="hidden">
     <div id="panel">
+      <div id="dragHandle"></div>
       <h1>Pub Ratings</h1>
-      <div class="stat-row"><span>Mapped</span><b id="count">…</b></div>
-      <div class="stat-row"><span>Average</span><b id="avg">…</b></div>
-      <div class="stat-row"><span>Best</span><b id="best">…</b></div>
+      <div class="stats">
+        <div class="stat-tile"><b id="count">…</b><span>Mapped</span></div>
+        <div class="stat-tile"><b id="avg">…</b><span>Average</span></div>
+        <div class="stat-tile"><b id="best">…</b><span>Best</span></div>
+      </div>
       <div class="scale">
         <span style="background:#f8696b"></span><span style="background:#fbb46e"></span>
         <span style="background:#ffeb84"></span><span style="background:#b1d67f"></span>
@@ -435,59 +574,102 @@
       </div>
       <div id="board">
         <h2>Leaderboard</h2>
-        <select id="city"><option value="">All cities</option></select>
-        <select id="author"><option value="">All authors</option></select>
-        <select id="sortBy">
-          <option value="score">Overall score</option>
-          <option value="location">Location</option>
-          <option value="beer">Beer Selection</option>
-          <option value="value">Value</option>
-          <option value="facilities">Facilities</option>
-          <option value="vibe">Vibe</option>
-        </select>
+        <div class="board-filters">
+          <select id="city"><option value="">All cities</option></select>
+          <select id="author"><option value="">All authors</option></select>
+          <select id="sortBy">
+            <option value="score">Overall score</option>
+            <option value="location">Location</option>
+            <option value="beer">Beer Selection</option>
+            <option value="value">Value</option>
+            <option value="facilities">Facilities</option>
+            <option value="vibe">Vibe</option>
+          </select>
+        </div>
         <table><tbody id="boardBody"></tbody></table>
       </div>
     </div>
 
-    <div id="groupBar">
-      <select id="mapGroupSel"></select>
-      <span class="me">·&nbsp;<b id="mapMe"></b></span>
-      <button id="mapSignout">sign out</button>
+    <div id="userBar">
+      <button id="avatarBtn" type="button" aria-label="Account and groups" aria-haspopup="true" aria-expanded="false">
+        <span id="avatarInitials">–</span>
+      </button>
+      <div id="userMenu" class="hidden">
+        <div class="um-head">
+          <div id="avatarLarge"><span id="avatarInitialsLg">–</span></div>
+          <div class="um-id">
+            <div class="um-name"><b id="mapMe"></b></div>
+            <div class="um-sub">Signed in</div>
+          </div>
+        </div>
+
+        <div class="um-sec">
+          <label class="um-label" for="mapGroupSel">Group</label>
+          <select id="mapGroupSel"></select>
+        </div>
+
+        <div class="um-sec">
+          <button id="mapCreateToggle" type="button" class="um-item">+ Create a group</button>
+          <div id="mapCreateBox" class="hidden">
+            <input id="mapNewName" type="text" placeholder="Group name" autocomplete="off">
+            <input id="mapNewCode" type="text" placeholder="Invite word" autocomplete="off">
+            <button id="mapCreate" type="button" class="um-primary">Create group</button>
+            <div id="mapGroupMsg" class="um-msg"></div>
+          </div>
+        </div>
+
+        <button id="mapSignout" type="button" class="um-item um-danger">Sign out</button>
+      </div>
     </div>
 
-    <button id="addBtn">+ Add a pub</button>
+    <div id="fabs">
+      <button id="addBtn">+ Add a pub</button>
+      <button id="activityBtn">Recent activity</button>
+    </div>
 
     <div id="form">
-      <h2>Rate a pub</h2>
-      <label for="f_pub">Pub name</label>
-      <input id="f_pub" type="text" placeholder="The Old Juke">
-      <label for="f_area">Area</label>
-      <input id="f_area" type="text" placeholder="Bristol, Kings Street">
-
-      <div id="formWho">Rating as <b id="f_authorName">—</b></div>
-
-      <label style="margin-top:10px">Scores (0–5)</label>
-      <div id="cats"></div>
-
-      <label for="f_note" style="margin-top:10px">Note <span style="color:#999">(optional)</span></label>
-      <textarea id="f_note" maxlength="200" rows="2"
-                placeholder="Cracking Guinness, dreadful loos."></textarea>
-      <div id="f_noteCount" class="noteCount">200 left</div>
-
-      <label for="f_photo" style="margin-top:10px">Photo <span style="color:#999">(optional)</span></label>
-      <input id="f_photo" type="file" accept="image/*" style="font-size:12px">
-      <div id="f_photoPreview" style="margin-top:6px"></div>
-
-      <div id="live"><span>Score</span><b id="liveScore">—</b></div>
-
-      <div id="formBtns">
-        <button id="cancel">Cancel</button>
-        <button id="save">Save</button>
+      <div id="formHead">
+        <h2>Rate a pub</h2>
+        <button id="formClose" type="button" aria-label="Close">×</button>
       </div>
-      <div id="formMsg"></div>
-    </div>
 
-    <button id="activityBtn">Recent activity</button>
+      <div id="formBody">
+        <div id="formWho">Rating as <b id="f_authorName">—</b></div>
+
+        <section class="fsec">
+          <label for="f_pub">Pub name</label>
+          <input id="f_pub" type="text" placeholder="The Old Juke">
+          <label for="f_area">Area</label>
+          <input id="f_area" type="text" placeholder="Bristol, Kings Street">
+        </section>
+
+        <section class="fsec">
+          <div class="fsec-title">Scores · 0–5</div>
+          <div id="cats"></div>
+        </section>
+
+        <section class="fsec">
+          <div class="fsec-title">Add more <span style="text-transform:none;font-weight:normal">(optional)</span></div>
+          <label for="f_note">Note</label>
+          <textarea id="f_note" maxlength="200" rows="2"
+                    placeholder="Cracking Guinness, dreadful loos."></textarea>
+          <div id="f_noteCount" class="noteCount">200 left</div>
+
+          <label for="f_photo">Photo</label>
+          <input id="f_photo" type="file" accept="image/*" style="font-size:12px">
+          <div id="f_photoPreview" style="margin-top:6px"></div>
+        </section>
+      </div>
+
+      <div id="formFoot">
+        <div id="live"><span>Overall score</span><b id="liveScore">—</b></div>
+        <div id="formBtns">
+          <button id="cancel">Cancel</button>
+          <button id="save">Save pub</button>
+        </div>
+        <div id="formMsg"></div>
+      </div>
+    </div>
 
     <div id="activity">
       <div id="activityHead">
@@ -1261,9 +1443,11 @@
 
     $('city').addEventListener('change', function () { applyFilters(); zoomToShown(); });
     $('author').addEventListener('change', function () { applyFilters(); zoomToShown(); });
-    document.querySelector('#panel h1').addEventListener('click', function () {
+    function toggleSheet() {
       if (isMobile()) $('panel').classList.toggle('collapsed');
-    });
+    }
+    document.querySelector('#panel h1').addEventListener('click', toggleSheet);
+    $('dragHandle').addEventListener('click', toggleSheet);
 
     function updateLegend() {
       var cat = sortKey() !== 'score';
@@ -1280,22 +1464,35 @@
     }
 
     // ---------- add-a-pub form ----------
+    /** Paint one slider: track fill + value chip take the score's colour. */
+    function updateCatVisual(key) {
+      var val = Number($('f_' + key).value);
+      var col = colourForKey(val, key);          // colourFor(val*2): red→yellow→green
+      var input = $('f_' + key);
+      input.style.setProperty('--pct', (val / 5) * 100);
+      input.style.setProperty('--cc', col);
+      var chip = $('v_' + key);
+      chip.textContent = val.toFixed(1);
+      chip.style.background = col;
+    }
+
     (function buildCats() {
       var box = $('cats');
       var step = isMobile() ? '0.5' : '0.1';
       CATS.forEach(function (c) {
         var row = document.createElement('div');
         row.className = 'cat';
-        row.innerHTML = '<span>' + c.label + '</span>' +
-          '<input type="range" id="f_' + c.key + '" min="0" max="5" step="' + step + '" value="3">' +
-          '<span class="v" id="v_' + c.key + '">3.0</span>';
+        row.innerHTML = '<span class="lab">' + c.label + '</span>' +
+          '<span class="v" id="v_' + c.key + '">3.0</span>' +
+          '<input type="range" id="f_' + c.key + '" min="0" max="5" step="' + step + '" value="3">';
         box.appendChild(row);
       });
       CATS.forEach(function (c) {
-        $('f_' + c.key).addEventListener('input', function (e) {
-          $('v_' + c.key).textContent = Number(e.target.value).toFixed(1);
+        $('f_' + c.key).addEventListener('input', function () {
+          updateCatVisual(c.key);
           updateLive();
         });
+        updateCatVisual(c.key);
       });
       updateLive();
     })();
@@ -1311,8 +1508,9 @@
     }
 
     function toggleForm(open) {
-      $('form').style.display = open ? 'block' : 'none';
-      $('addBtn').style.display = open ? 'none' : 'block';
+      $('form').style.display = open ? 'flex' : 'none';
+      $('fabs').style.display = open ? 'none' : 'flex';
+      $('userBar').style.display = open ? 'none' : 'block';
       if (open) {
         $('f_authorName').textContent = PROFILE ? PROFILE.display_name : '—';
         if (!isMobile()) $('f_pub').focus();
@@ -1345,7 +1543,9 @@
     }
 
     $('addBtn').addEventListener('click', function () { toggleForm(true); });
-    $('cancel').addEventListener('click', function () { toggleForm(false); setFormMsg('', ''); });
+    function closeForm() { toggleForm(false); setFormMsg('', ''); }
+    $('cancel').addEventListener('click', closeForm);
+    $('formClose').addEventListener('click', closeForm);
 
     function setFormMsg(text, cls) {
       var el = $('formMsg');
@@ -1460,7 +1660,14 @@
       $('lightboxImg').src = '';
     });
 
-    // ---------- group switcher inside the map ----------
+    // ---------- account + group menu inside the map ----------
+    function initialsOf(name) {
+      var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return '–';
+      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+
     function syncMapGroupBar() {
       var sel = $('mapGroupSel');
       sel.innerHTML = '';
@@ -1469,12 +1676,68 @@
         o.value = g.id; o.textContent = g.name; sel.appendChild(o);
       });
       sel.value = ACTIVE_GROUP.id;
-      $('mapMe').textContent = PROFILE ? PROFILE.display_name : '';
+      var name = PROFILE ? PROFILE.display_name : '';
+      $('mapMe').textContent = name;
+      var ini = initialsOf(name);
+      $('avatarInitials').textContent = ini;
+      $('avatarInitialsLg').textContent = ini;
     }
     $('mapGroupSel').addEventListener('change', function () {
       var g = GROUPS.find(function (x) { return x.id === $('mapGroupSel').value; });
       if (!g) return;
       ACTIVE_GROUP = { id: g.id, name: g.name };
+      closeUserMenu();
+      renderPubs();
+    });
+
+    // open/close the avatar menu; tap-away and Escape close it
+    function openUserMenu() {
+      $('userMenu').classList.remove('hidden');
+      $('avatarBtn').setAttribute('aria-expanded', 'true');
+    }
+    function closeUserMenu() {
+      $('userMenu').classList.add('hidden');
+      $('avatarBtn').setAttribute('aria-expanded', 'false');
+      $('mapCreateBox').classList.add('hidden');
+      setMapMsg('', '');
+    }
+    $('avatarBtn').addEventListener('click', function (e) {
+      e.stopPropagation();
+      $('userMenu').classList.contains('hidden') ? openUserMenu() : closeUserMenu();
+    });
+    $('userMenu').addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', function () {
+      if (!$('userMenu').classList.contains('hidden')) closeUserMenu();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !$('userMenu').classList.contains('hidden')) closeUserMenu();
+    });
+
+    // create a group without leaving the map
+    function setMapMsg(text, cls) {
+      var el = $('mapGroupMsg');
+      el.textContent = text;
+      el.className = 'um-msg' + (cls ? ' ' + cls : '');
+    }
+    $('mapCreateToggle').addEventListener('click', function () {
+      var box = $('mapCreateBox');
+      var opening = box.classList.contains('hidden');
+      box.classList.toggle('hidden');
+      if (opening) $('mapNewName').focus();
+    });
+    $('mapCreate').addEventListener('click', async function () {
+      var name = $('mapNewName').value.trim(), code = $('mapNewCode').value.trim();
+      if (!name || !code) { setMapMsg('Name the group and give it an invite word.', 'bad'); return; }
+      $('mapCreate').disabled = true; setMapMsg('Creating…', '');
+      var res = await sb.rpc('create_group', { p_name: name, p_invite_code: code });
+      $('mapCreate').disabled = false;
+      if (res.error) { setMapMsg(res.error.message, 'bad'); return; }
+      await loadGroups();
+      var g = GROUPS.find(function (x) { return x.name === name; }) || GROUPS[GROUPS.length - 1];
+      if (g) ACTIVE_GROUP = { id: g.id, name: g.name };
+      $('mapNewName').value = ''; $('mapNewCode').value = '';
+      syncMapGroupBar();
+      closeUserMenu();
       renderPubs();
     });
 
