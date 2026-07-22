@@ -246,11 +246,9 @@
       display: flex; flex-direction: row-reverse; align-items: flex-start; gap: 10px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
-    #addBtn, #activityBtn {
+    #addBtn {
       cursor: pointer; border-radius: 24px; padding: 11px 18px; font-size: 14px;
       font-weight: bold; font-family: inherit; white-space: nowrap;
-    }
-    #addBtn {
       background: var(--slate); color: #fff; border: 0;
       box-shadow: 0 4px 14px rgba(0,0,0,.26);
     }
@@ -350,9 +348,27 @@
     #formMsg.bad { color: #b3261e; }
     #formMsg.good { color: #0F6E56; }
 
+    /* panel tabs + swipeable pages (leaderboard / activity) */
+    #panelTabs {
+      display: flex; gap: 4px; background: var(--bg); border-radius: 10px;
+      padding: 3px; margin: 0 0 12px;
+    }
+    .ptab {
+      flex: 1; border: 0; background: none; cursor: pointer;
+      padding: 8px 10px; border-radius: 8px; font-family: inherit; font-size: 13px;
+      font-weight: bold; color: var(--muted);
+    }
+    .ptab.active { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+    #panelPages { overflow: hidden; height: 46vh; }
+    #panelTrack { display: flex; height: 100%; transition: transform .25s ease; touch-action: pan-y; }
+    .panel-page {
+      flex: 0 0 100%; width: 100%; height: 100%;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+
     /* leaderboard */
-    #board { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
-    #board h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: .01em; }
+    #board { margin-top: 12px; }
     .board-filters { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
     #city, #author, #sortBy {
       width: 100%; padding: 8px 10px; font-size: 13px;
@@ -372,52 +388,34 @@
     #board .dot i { display: block; width: 10px; height: 10px; border-radius: 50%; }
     #board .none { color: var(--muted); font-style: italic; padding: 8px 0; }
 
-    /* recent activity */
-    #activityBtn {
-      background: #fff; color: var(--slate); border: 1px solid var(--line);
-      box-shadow: 0 4px 14px rgba(0,0,0,.14);
-    }
-    #activityBtn:hover { background: #f3f3f1; }
-    #activity {
-      position: absolute; top: 0; right: 0; bottom: 0; width: 300px; z-index: 7;
-      background: rgba(255,255,255,.98); box-shadow: -2px 0 14px rgba(0,0,0,.25);
-      transform: translateX(100%); transition: transform .22s ease;
-      display: flex; flex-direction: column; font-size: 13px;
-    }
-    #activity.open { transform: translateX(0); }
-    #activityHead {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 14px 8px; border-bottom: 1px solid #eee;
-    }
-    #activityHead h2 { margin: 0; font-size: 14px; }
-    #activityClose {
-      background: none; border: 0; font-size: 22px; line-height: 1;
-      cursor: pointer; color: #777; padding: 0 4px;
-    }
-    #activityList { overflow-y: auto; padding: 6px 0; }
+    /* recent activity list */
+    #activityList { padding: 2px 0; }
     .act {
       display: flex; align-items: center; gap: 10px;
-      padding: 9px 14px; border-bottom: 1px solid #f2f2f2; cursor: pointer;
+      padding: 10px 2px; border-bottom: 1px solid #f2f2f0; cursor: pointer;
     }
-    .act:hover { background: #f5f5f5; }
-    .act i { flex: 0 0 9px; width: 9px; height: 9px; border-radius: 50%; }
+    .act:hover { background: var(--bg); }
+    .act i { flex: 0 0 10px; width: 10px; height: 10px; border-radius: 50%; }
     .act .body { flex: 1; min-width: 0; }
     .act .pub { font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .act .meta { color: #777; font-size: 11px; }
+    .act .meta { color: var(--muted); font-size: 11px; }
     .act .sc { font-weight: bold; font-variant-numeric: tabular-nums; }
-    .act .none { color: #888; font-style: italic; padding: 12px 14px; }
+    .act .none { color: var(--muted); font-style: italic; padding: 12px 2px; }
 
     /* mobile */
     @media (max-width: 640px) {
       #panel {
         top: auto; bottom: 0; left: 0; right: 0;
         border-radius: 16px 16px 0 0;
-        max-height: 45vh; min-width: 0;
+        max-height: 55vh; min-width: 0;
         padding: 4px 16px calc(14px + env(safe-area-inset-bottom));
         box-shadow: 0 -4px 24px rgba(0,0,0,.18);
         transition: max-height .2s ease;
+        display: flex; flex-direction: column; overflow: hidden;
       }
-      #panel.collapsed { max-height: 58px; overflow: hidden; }
+      #panel.collapsed { max-height: 58px; }
+      #dragHandle, #panel h1, #panel .stats, #panelTabs { flex: 0 0 auto; }
+      #panelPages { height: auto; flex: 1 1 auto; min-height: 0; }
       #dragHandle {
         display: block; width: 36px; height: 4px; border-radius: 2px;
         background: #d5d5d0; margin: 8px auto 2px; cursor: pointer;
@@ -430,12 +428,12 @@
       #panel.collapsed h1::after { transform: rotate(180deg); }
 
       #fabs {
-        top: auto; bottom: calc(45vh + 12px); right: 12px;
+        top: auto; bottom: calc(55vh + 12px); right: 12px;
         flex-direction: column-reverse; align-items: flex-end;
         transition: bottom .2s ease;
       }
       #panel.collapsed ~ #fabs { bottom: calc(70px + env(safe-area-inset-bottom)); }
-      #addBtn, #activityBtn { padding: 13px 20px; font-size: 15px; box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+      #addBtn { padding: 13px 20px; font-size: 15px; box-shadow: 0 4px 16px rgba(0,0,0,.3); }
 
       #form {
         top: 0; left: 0; right: 0; bottom: 0; width: auto;
@@ -455,12 +453,6 @@
       #board .nm { max-width: none; }
       #formBtns button { padding: 12px; font-size: 15px; }
       #err { bottom: auto; top: 12px; left: 12px; right: 12px; }
-      #activity {
-        top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 70vh;
-        border-radius: 12px 12px 0 0; transform: translateY(100%);
-        padding-bottom: env(safe-area-inset-bottom);
-      }
-      #activity.open { transform: translateY(0); }
     }
   </style>
 </head>
@@ -564,29 +556,44 @@
         <div class="stat-tile"><b id="avg">…</b><span>Average</span></div>
         <div class="stat-tile"><b id="best">…</b><span>Best</span></div>
       </div>
-      <div class="scale">
-        <span style="background:#f8696b"></span><span style="background:#fbb46e"></span>
-        <span style="background:#ffeb84"></span><span style="background:#b1d67f"></span>
-        <span style="background:#63be7b"></span>
+
+      <div id="panelTabs" role="tablist">
+        <button class="ptab active" type="button" data-page="0" role="tab" aria-selected="true">Leaderboard</button>
+        <button class="ptab" type="button" data-page="1" role="tab" aria-selected="false">Activity</button>
       </div>
-      <div class="scale-ends">
-        <span id="scLo">4.0</span><span id="scMid">6.5</span><span id="scHi">9.0</span>
-      </div>
-      <div id="board">
-        <h2>Leaderboard</h2>
-        <div class="board-filters">
-          <select id="city"><option value="">All cities</option></select>
-          <select id="author"><option value="">All authors</option></select>
-          <select id="sortBy">
-            <option value="score">Overall score</option>
-            <option value="location">Location</option>
-            <option value="beer">Beer Selection</option>
-            <option value="value">Value</option>
-            <option value="facilities">Facilities</option>
-            <option value="vibe">Vibe</option>
-          </select>
+
+      <div id="panelPages">
+        <div id="panelTrack">
+          <section class="panel-page" id="pageBoard" role="tabpanel">
+            <div class="scale">
+              <span style="background:#f8696b"></span><span style="background:#fbb46e"></span>
+              <span style="background:#ffeb84"></span><span style="background:#b1d67f"></span>
+              <span style="background:#63be7b"></span>
+            </div>
+            <div class="scale-ends">
+              <span id="scLo">4.0</span><span id="scMid">6.5</span><span id="scHi">9.0</span>
+            </div>
+            <div id="board">
+              <div class="board-filters">
+                <select id="city"><option value="">All cities</option></select>
+                <select id="author"><option value="">All authors</option></select>
+                <select id="sortBy">
+                  <option value="score">Overall score</option>
+                  <option value="location">Location</option>
+                  <option value="beer">Beer Selection</option>
+                  <option value="value">Value</option>
+                  <option value="facilities">Facilities</option>
+                  <option value="vibe">Vibe</option>
+                </select>
+              </div>
+              <table><tbody id="boardBody"></tbody></table>
+            </div>
+          </section>
+
+          <section class="panel-page" id="pageActivity" role="tabpanel">
+            <div id="activityList"></div>
+          </section>
         </div>
-        <table><tbody id="boardBody"></tbody></table>
       </div>
     </div>
 
@@ -624,7 +631,6 @@
 
     <div id="fabs">
       <button id="addBtn">+ Add a pub</button>
-      <button id="activityBtn">Recent activity</button>
     </div>
 
     <div id="form">
@@ -671,14 +677,6 @@
       </div>
     </div>
 
-    <div id="activity">
-      <div id="activityHead">
-        <h2>Recent activity</h2>
-        <button id="activityClose">×</button>
-      </div>
-      <div id="activityList"></div>
-    </div>
-
     <div id="map"></div>
     <div id="err"></div>
 
@@ -721,12 +719,21 @@
     let GROUPS = [];             // groups this user belongs to
     let ACTIVE_GROUP = null;     // { id, name } currently selected
 
+    // Remember the last group visited so we can skip the picker next time.
+    const LAST_GROUP_KEY = 'pmp:lastGroup';
+    function lastGroupId() { try { return localStorage.getItem(LAST_GROUP_KEY); } catch (e) { return null; } }
+    function rememberGroup() { try { if (ACTIVE_GROUP) localStorage.setItem(LAST_GROUP_KEY, ACTIVE_GROUP.id); } catch (e) {} }
+
     let routing = false;
     async function route() {
       if (routing) return; routing = true;
       try {
         const { data:{ session } } = await sb.auth.getSession();
         if (!session) { showGate('s-signin'); return; }
+
+        // Already inside the map (e.g. a background token refresh fired) — don't
+        // route again and yank the user back to the gate.
+        if (document.body.classList.contains('app')) return;
 
         const { data: prof, error } = await sb
           .from('profiles').select('*').eq('user_id', session.user.id).maybeSingle();
@@ -737,6 +744,13 @@
         $('meName').textContent = prof.display_name;
 
         await loadGroups();
+
+        // Skip the group picker: open the last group visited, or the only group.
+        // Switching / creating / signing out all live in the in-map avatar menu.
+        const auto = GROUPS.find((g) => g.id === lastGroupId())
+          || (GROUPS.length === 1 ? GROUPS[0] : null);
+        if (auto) { ACTIVE_GROUP = { id: auto.id, name: auto.name }; enterApp(); return; }
+
         showGate('s-groups');
       } finally { routing = false; }
     }
@@ -1296,6 +1310,7 @@
       updateLegend();
       applyFilters();
       loadUsers();
+      loadActivity();
       if (isMobile()) $('panel').classList.add('collapsed');
     }
 
@@ -1634,10 +1649,7 @@
           '</div>' +
           '<span class="sc" style="color:' + colourFor(a.score) + '">' +
             (a.score == null ? '—' : a.score.toFixed(1)) + '</span>';
-        row.addEventListener('click', function () {
-          $('activity').classList.remove('open');
-          focusPub(a);
-        });
+        row.addEventListener('click', function () { focusPub(a); });
         box.appendChild(row);
       });
     }
@@ -1646,13 +1658,52 @@
       fetchActivity(40).then(renderActivity).catch(function () {});
     }
 
-    $('activityBtn').addEventListener('click', function () {
-      $('activity').classList.add('open');
-      loadActivity();
+    // ---------- panel: leaderboard / activity tabs + swipe ----------
+    var PANEL_PAGE = 0;                 // 0 = leaderboard, 1 = activity
+    function setPanelPage(i) {
+      PANEL_PAGE = i;
+      $('panelTrack').style.transform = 'translateX(' + (-i * 100) + '%)';
+      document.querySelectorAll('#panelTabs .ptab').forEach(function (b, idx) {
+        var on = idx === i;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      if (i === 1) loadActivity();     // freshen the feed when it comes into view
+    }
+    document.querySelectorAll('#panelTabs .ptab').forEach(function (b) {
+      b.addEventListener('click', function () { setPanelPage(Number(b.dataset.page)); });
     });
-    $('activityClose').addEventListener('click', function () {
-      $('activity').classList.remove('open');
-    });
+
+    // horizontal swipe between the two pages (touch only; vertical scroll untouched)
+    (function () {
+      var pages = $('panelPages'), track = $('panelTrack');
+      var x0 = 0, y0 = 0, dir = 0;     // dir: 0 undecided, 1 horizontal, -1 vertical
+      pages.addEventListener('touchstart', function (e) {
+        var t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; dir = 0;
+        track.style.transition = 'none';
+      }, { passive: true });
+      pages.addEventListener('touchmove', function (e) {
+        var t = e.touches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+        if (dir === 0 && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+          dir = Math.abs(dx) > Math.abs(dy) ? 1 : -1;
+        }
+        if (dir !== 1) return;         // let the page scroll vertically
+        e.preventDefault();
+        var base = -PANEL_PAGE * pages.clientWidth;
+        // resist dragging past the first/last page
+        if ((PANEL_PAGE === 0 && dx > 0) || (PANEL_PAGE === 1 && dx < 0)) dx *= 0.35;
+        track.style.transform = 'translateX(' + (base + dx) + 'px)';
+      }, { passive: false });
+      pages.addEventListener('touchend', function (e) {
+        track.style.transition = '';
+        if (dir !== 1) return;
+        var dx = e.changedTouches[0].clientX - x0;
+        var threshold = pages.clientWidth * 0.2;
+        if (dx <= -threshold && PANEL_PAGE === 0) setPanelPage(1);
+        else if (dx >= threshold && PANEL_PAGE === 1) setPanelPage(0);
+        else setPanelPage(PANEL_PAGE);  // snap back
+      });
+    })();
 
     // close the photo lightbox on any click
     $('lightbox').addEventListener('click', function () {
@@ -1686,6 +1737,7 @@
       var g = GROUPS.find(function (x) { return x.id === $('mapGroupSel').value; });
       if (!g) return;
       ACTIVE_GROUP = { id: g.id, name: g.name };
+      rememberGroup();
       closeUserMenu();
       renderPubs();
     });
@@ -1735,6 +1787,7 @@
       await loadGroups();
       var g = GROUPS.find(function (x) { return x.name === name; }) || GROUPS[GROUPS.length - 1];
       if (g) ACTIVE_GROUP = { id: g.id, name: g.name };
+      rememberGroup();
       $('mapNewName').value = ''; $('mapNewCode').value = '';
       syncMapGroupBar();
       closeUserMenu();
@@ -1764,6 +1817,7 @@
       document.body.className = 'app';
       $('gate').classList.add('hidden');
       $('app').classList.remove('hidden');
+      rememberGroup();
       syncMapGroupBar();
       try {
         await loadGoogleMaps();
