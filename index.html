@@ -102,6 +102,36 @@
     .hidden{display:none}
     .spin{color:var(--muted); font-size:13px; text-align:center; padding:10px 0}
 
+    /* ---------- loading splash (live drifting map + animated brand) ---------- */
+    #gate{ position:relative; z-index:1 }
+    #loadmap{ display:none }
+    body.is-loading #loadmap{
+      display:block; position:fixed; inset:0; z-index:0; background:var(--bg);
+    }
+    /* soft scrim so the card stays readable over the map */
+    body.is-loading #loadmap::after{
+      content:""; position:absolute; inset:0; pointer-events:none;
+      background:radial-gradient(120% 90% at 50% 45%, rgba(255,255,255,.08), rgba(0,0,0,.28));
+    }
+    /* bigger, centred brand while loading */
+    body.is-loading .inner{ text-align:center }
+    body.is-loading #gate h1{
+      font-size:40px; line-height:1.1; margin:6px 0 14px; letter-spacing:.005em;
+    }
+    /* the 5-colour ramp becomes a flowing animated loading bar (same colours) */
+    body.is-loading .ramp{
+      height:8px;
+      background:linear-gradient(90deg,
+        #f8696b,#fbb46e,#ffeb84,#b1d67f,#63be7b,#b1d67f,#ffeb84,#fbb46e,#f8696b);
+      background-size:200% 100%;
+      animation:rampSlide 2.2s linear infinite;
+    }
+    body.is-loading .ramp i{ display:none }
+    @keyframes rampSlide{ from{background-position:0 0} to{background-position:-200% 0} }
+    @media (prefers-reduced-motion: reduce){
+      body.is-loading .ramp{ animation:none }
+    }
+
     /* ---------- map app (ported from page.html) ---------- */
     #app{ position:fixed; inset:0; }
     #map { height: 100%; width: 100%; }
@@ -477,7 +507,10 @@
     }
   </style>
 </head>
-<body class="gate">
+<body class="gate is-loading">
+
+  <!-- slowly-drifting live map behind the loading splash -->
+  <div id="loadmap" aria-hidden="true"></div>
 
   <!-- ============ AUTH / GATE (Phase 3 shell, unchanged) ============ -->
   <div class="card" id="gate">
@@ -561,7 +594,7 @@
         </div>
       </section>
 
-      <div id="loading" class="spin">Loading…</div>
+      <div id="loading" class="spin"></div>
     </div>
   </div>
 
@@ -729,7 +762,7 @@
     // ===========================================================
     const GATE_SECTIONS = ['s-signin','s-sent','s-name','s-groups','loading'];
     function showGate(id) {
-      document.body.className = 'gate';
+      document.body.className = 'gate' + (id === 'loading' ? ' is-loading' : '');
       $('gate').classList.remove('hidden');
       $('app').classList.add('hidden');
       GATE_SECTIONS.forEach((s) => $(s).classList.toggle('hidden', s !== id));
@@ -1909,7 +1942,37 @@
       }
     }
 
+    // ---------- loading-splash background map (slow drift) ----------
+    var BG_MAP = null, BG_RAF = 0, BG_ANGLE = 0;
+    async function startLoadMap() {
+      try {
+        await loadGoogleMaps();
+        const { Map } = await google.maps.importLibrary('maps');
+        BG_MAP = new Map(document.getElementById('loadmap'), {
+          mapId: 'DEMO_MAP_ID',
+          center: { lat: 52.2, lng: -1.5 },   // same view the app opens on
+          zoom: 6,
+          disableDefaultUI: true,
+          gestureHandling: 'none',
+          keyboardShortcuts: false,
+          clickableIcons: false
+        });
+        BG_RAF = requestAnimationFrame(driftLoadMap);
+      } catch (e) { /* splash map is a nicety; ignore failures */ }
+    }
+    var REDUCE_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function driftLoadMap() {
+      BG_RAF = requestAnimationFrame(driftLoadMap);
+      if (REDUCE_MOTION || !BG_MAP || !document.body.classList.contains('is-loading')) return;
+      BG_ANGLE += 0.002;   // ~50s per lap — a gentle, slow drift around the app view
+      BG_MAP.setCenter({
+        lat: 52.2 + Math.sin(BG_ANGLE) * 0.35,
+        lng: -1.5 + Math.cos(BG_ANGLE) * 0.6
+      });
+    }
+
     // ---------- boot ----------
+    startLoadMap();
     sb.auth.onAuthStateChange(() => route());
     route();
   </script>
