@@ -613,6 +613,8 @@
         <div class="um-sec">
           <label class="um-label" for="mapGroupSel">Group</label>
           <select id="mapGroupSel"></select>
+          <button id="mapShare" type="button" class="um-item">Invite someone to this group</button>
+          <div id="mapShareMsg" class="um-msg"></div>
         </div>
 
         <div class="um-sec">
@@ -724,6 +726,34 @@
     function lastGroupId() { try { return localStorage.getItem(LAST_GROUP_KEY); } catch (e) { return null; } }
     function rememberGroup() { try { if (ACTIVE_GROUP) localStorage.setItem(LAST_GROUP_KEY, ACTIVE_GROUP.id); } catch (e) {} }
 
+    // A ?join=<invite word> link stashes the word here on load, so it survives the
+    // sign-in redirect (OAuth / magic link bounce back to origin, dropping the query).
+    // It's consumed once the user has a profile — see consumePendingJoin() in route().
+    const PENDING_JOIN_KEY = 'pmp:pendingJoin';
+    (function captureInvite() {
+      try {
+        const params = new URLSearchParams(location.search);
+        const code = (params.get('join') || '').trim();
+        if (!code) return;
+        localStorage.setItem(PENDING_JOIN_KEY, code);
+        params.delete('join');
+        const qs = params.toString();
+        history.replaceState({}, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+      } catch (e) {}
+    })();
+
+    // Redeem a stashed invite word. Needs a profile (join_group uses current_profile_id),
+    // so it's called from route() only after the profile is confirmed. Returns the joined
+    // group row, or null if there was nothing to redeem / the word was no good.
+    async function consumePendingJoin() {
+      let code = null;
+      try { code = localStorage.getItem(PENDING_JOIN_KEY); } catch (e) {}
+      if (!code) return null;
+      const { data: g, error } = await sb.rpc('join_group', { p_code: code });
+      try { localStorage.removeItem(PENDING_JOIN_KEY); } catch (e) {}
+      return (error || !g) ? null : g;
+    }
+
     let routing = false;
     async function route() {
       if (routing) return; routing = true;
@@ -743,7 +773,16 @@
         PROFILE = prof;
         $('meName').textContent = prof.display_name;
 
+        // Redeem a shared ?join=<word> link, then drop straight into that group.
+        const joined = await consumePendingJoin();
+
         await loadGroups();
+
+        if (joined) {
+          ACTIVE_GROUP = { id: joined.id, name: joined.name };
+          enterApp();
+          return;
+        }
 
         // Skip the group picker: open the last group visited, or the only group.
         // Switching / creating / signing out all live in the in-map avatar menu.
@@ -1752,6 +1791,7 @@
       $('avatarBtn').setAttribute('aria-expanded', 'false');
       $('mapCreateBox').classList.add('hidden');
       setMapMsg('', '');
+      setShareMsg('', '');
     }
     $('avatarBtn').addEventListener('click', function (e) {
       e.stopPropagation();
@@ -1763,6 +1803,29 @@
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !$('userMenu').classList.contains('hidden')) closeUserMenu();
+    });
+
+    // share a link that joins the active group directly (the ?join= word)
+    function setShareMsg(text, cls) {
+      var el = $('mapShareMsg');
+      el.textContent = text;
+      el.className = 'um-msg' + (cls ? ' ' + cls : '');
+    }
+    $('mapShare').addEventListener('click', async function () {
+      var g = GROUPS.find(function (x) { return x.id === ACTIVE_GROUP.id; });
+      if (!g || !g.invite_code) { setShareMsg('No invite word for this group.', 'bad'); return; }
+      var url = location.origin + '/?join=' + encodeURIComponent(g.invite_code);
+      var shareData = { title: 'PlotMyPub', text: 'Join "' + g.name + '" on PlotMyPub', url: url };
+      if (navigator.share) {
+        try { await navigator.share(shareData); return; }
+        catch (e) { if (e && e.name === 'AbortError') return; /* fall through to copy */ }
+      }
+      try {
+        await navigator.clipboard.writeText(url);
+        setShareMsg('Invite link copied ✓', 'good');
+      } catch (e) {
+        setShareMsg(url, '');
+      }
     });
 
     // create a group without leaving the map
