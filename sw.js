@@ -14,7 +14,7 @@
  * CACHE_VERSION is only needed to purge the old cache, not to avoid staleness.
  */
 
-const CACHE_VERSION = 'plotmypub-v6';
+const CACHE_VERSION = 'plotmypub-v7';
 
 const SHELL = [
   '/',
@@ -59,10 +59,14 @@ self.addEventListener('install', function (e) {
   // page defers the reload while the rating form is open so nothing is lost.
   e.waitUntil(
     caches.open(CACHE_VERSION)
-      // addAll fails the whole install if one file 404s; be forgiving.
+      // Precache each shell file, but fetch with cache:'no-cache' so we bypass
+      // the browser's HTTP disk cache (GitHub Pages sends max-age=600) and store
+      // the TRUE latest bytes, not a stale copy. add() would use the HTTP cache.
       .then(function (c) {
         return Promise.all(SHELL.map(function (url) {
-          return c.add(url).catch(function () { /* skip missing asset */ });
+          return fetch(url, { cache: 'no-cache' })
+            .then(function (res) { if (res && res.ok) return c.put(url, res); })
+            .catch(function () { /* skip missing asset */ });
         }));
       })
       .then(function () { return self.skipWaiting(); })
@@ -95,7 +99,7 @@ self.addEventListener('fetch', function (e) {
   // fall back to the cached shell when offline.
   if (req.mode === 'navigate') {
     e.respondWith(
-      fetch(req)
+      fetch(req, { cache: 'no-cache' })
         .then(function (res) {
           const copy = res.clone();
           caches.open(CACHE_VERSION).then(function (c) { c.put('/index.html', copy); });
@@ -116,7 +120,10 @@ self.addEventListener('fetch', function (e) {
   // split the app into separate .css/.mjs files without a staleness trap.
   e.respondWith(
     caches.match(req).then(function (hit) {
-      const fetching = fetch(req).then(function (res) {
+      // Revalidate with cache:'no-cache' so the background refresh reaches the
+      // server (conditional request) instead of being answered by the browser's
+      // still-fresh HTTP cache — otherwise we'd keep re-storing a stale asset.
+      const fetching = fetch(req, { cache: 'no-cache' }).then(function (res) {
         if (res && res.status === 200 && res.type === 'basic') {
           const copy = res.clone();
           caches.open(CACHE_VERSION).then(function (c) { c.put(req, copy); });
