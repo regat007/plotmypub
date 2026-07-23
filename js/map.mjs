@@ -232,7 +232,6 @@ async function renderPubs() {
   applyFilters();
   loadUsers();
   loadActivity();
-  if (isMobile()) $('panel').classList.add('collapsed');
 }
 
 function renderStats(list) {
@@ -333,6 +332,7 @@ function renderBoard(list) {
 }
 
 function focusPub(p) {
+  showView('map');            // leaderboard/activity live in the Feed tab — jump to the map
   var hit = null;
   MARKERS.forEach(function (m) {
     if ((p.placeId && m.pub.placeId === p.placeId) || m.pub.pub === p.pub) hit = m;
@@ -343,7 +343,6 @@ function focusPub(p) {
     INFO.setContent(infoHtml(p));
     INFO.open(MAP, hit.marker);
   }
-  if (isMobile()) $('panel').classList.add('collapsed');
 }
 
 function applyFilters() {
@@ -375,11 +374,6 @@ function zoomToShown() {
 
 $('city').addEventListener('change', function () { applyFilters(); zoomToShown(); });
 $('author').addEventListener('change', function () { applyFilters(); zoomToShown(); });
-function toggleSheet() {
-  if (isMobile()) $('panel').classList.toggle('collapsed');
-}
-document.querySelector('#panel h1').addEventListener('click', toggleSheet);
-$('dragHandle').addEventListener('click', toggleSheet);
 
 function updateLegend() {
   var cat = sortKey() !== 'score';

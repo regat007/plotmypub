@@ -1,8 +1,6 @@
-// PlotMyPub — Feed tab (placeholder). Future home of the group's rating feed.
-import { placeholderView } from '../router.mjs';
+// PlotMyPub — Feed tab. Home of the group's leaderboard + recent activity.
+// The markup lives in index.html (#panel, inside .feed-view) and is wired up by
+// map.mjs via shared element IDs; here we just register it as a routable view.
+import { registerView } from '../router.mjs';
 
-placeholderView('feed', {
-  emoji: '📰',
-  title: 'Feed',
-  blurb: "-- Latest updates --\n -- Coming soon! --",
-});
+registerView('feed', { el: document.querySelector('.view-ph[data-view="feed"]') });

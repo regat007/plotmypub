@@ -125,8 +125,10 @@
 
   <!-- ============ MAP APP (ported from page.html) ============ -->
   <div id="app" class="hidden">
+
+    <!-- ===== FEED TAB: leaderboard + recent activity (relocated off the map) ===== -->
+    <section class="view-ph feed-view" data-view="feed" role="tabpanel">
     <div id="panel">
-      <div id="dragHandle"></div>
       <h1>Pub Ratings</h1>
       <div class="stats">
         <div class="stat-tile"><b id="count">…</b><span>Mapped</span></div>
@@ -173,6 +175,7 @@
         </div>
       </div>
     </div>
+    </section>
 
     <div id="userBar">
       <button id="avatarBtn" type="button" aria-label="Account and groups" aria-haspopup="true" aria-expanded="false">
