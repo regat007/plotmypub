@@ -14,7 +14,7 @@
  * CACHE_VERSION is only needed to purge the old cache, not to avoid staleness.
  */
 
-const CACHE_VERSION = 'plotmypub-v4';
+const CACHE_VERSION = 'plotmypub-v5';
 
 const SHELL = [
   '/',
@@ -52,11 +52,11 @@ const NEVER_CACHE = [
 ];
 
 self.addEventListener('install', function (e) {
-  // NB: we deliberately do NOT call skipWaiting() here. A freshly installed
-  // worker stays "waiting" until the page tells it to take over — either the
-  // user taps "Refresh" in the update banner (which posts SKIP_WAITING, handled
-  // below), or an older client's auto-update logic does the same. That keeps
-  // updates from reloading the app out from under someone mid-rating.
+  // skipWaiting() lets a freshly installed worker take over right away instead
+  // of waiting for every tab to close. Combined with clients.claim() below and
+  // the page's controllerchange→reload, this makes updates fully automatic: a
+  // new deploy applies itself on the user's next visit, no action required. The
+  // page defers the reload while the rating form is open so nothing is lost.
   e.waitUntil(
     caches.open(CACHE_VERSION)
       // addAll fails the whole install if one file 404s; be forgiving.
@@ -65,6 +65,7 @@ self.addEventListener('install', function (e) {
           return c.add(url).catch(function () { /* skip missing asset */ });
         }));
       })
+      .then(function () { return self.skipWaiting(); })
   );
 });
 

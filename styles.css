@@ -518,26 +518,3 @@
       letter-spacing: .08em; color: var(--slate); background: #fff;
       border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px;
     }
-
-    /* ---------- "new version available" banner ---------- */
-    /* Sits above everything (incl. lightbox) and slides in from the top only
-       when a fresh service worker is waiting. Lives at <body> level so it also
-       shows on the sign-in gate, not just inside the map app. */
-    #updateBar {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 40;
-      display: flex; align-items: center; justify-content: center; gap: 14px;
-      background: var(--slate); color: #fff;
-      padding: calc(11px + env(safe-area-inset-top)) 16px 11px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      font-size: 14px; text-align: center;
-      box-shadow: 0 2px 16px rgba(0,0,0,.28);
-      transform: translateY(-100%); transition: transform .28s ease;
-    }
-    #updateBar.show { transform: translateY(0); }
-    #updateBar button {
-      flex: 0 0 auto; background: #fff; color: var(--slate); border: 0;
-      border-radius: 999px; padding: 7px 16px; font-size: 13px; font-weight: bold;
-      font-family: inherit; cursor: pointer; white-space: nowrap;
-    }
-    #updateBar button:hover { background: #eef1f0; }
-    #updateBar button:disabled { opacity: .7; cursor: default; }
