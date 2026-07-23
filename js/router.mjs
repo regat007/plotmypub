@@ -6,6 +6,7 @@
 import { $ } from './core.mjs';
 
 const views = {};      // name -> { el?, onShow? }
+const order = {};       // name -> tab index (nav order), used for slide direction
 let current = null;
 
 /** Register a view with an optional element + onShow callback. */
@@ -30,14 +31,41 @@ export function placeholderView(name, { emoji, title, blurb }) {
   return el;
 }
 
-/** Show a view by name. Unknown names fall back to the map. */
+/** Show a view by name. Unknown names fall back to the map.
+ *  Tabs slide as a horizontal filmstrip: moving toward a higher-index tab, the
+ *  outgoing panel exits left and the incoming one enters from the right (and the
+ *  reverse when moving toward a lower-index tab). The map is the static base
+ *  layer — it has no panel, so overlays simply slide over/off it. */
 export function showView(name) {
   if (name !== 'map' && !views[name]) name = 'map';
+  if (name === current) return;
+
+  const from = current;
+  const movingRight = (order[name] || 0) > (order[from] || 0);
+  const enterSide = movingRight ? 'slide-right' : 'slide-left';
+  const exitSide  = movingRight ? 'slide-left'  : 'slide-right';
+
+  // Send the outgoing panel off the opposite way to travel.
+  const outEl = from && views[from] && views[from].el;
+  if (outEl) {
+    outEl.classList.remove('active', 'slide-left', 'slide-right', 'no-anim');
+    outEl.classList.add(exitSide);
+  }
+
+  // Park the incoming panel just off-screen on the entry side (no animation),
+  // commit that position, then release it to slide into place.
+  const inEl = views[name] && views[name].el;   // map has no panel
+  if (inEl) {
+    inEl.classList.add('no-anim');
+    inEl.classList.remove('active', 'slide-left', 'slide-right');
+    inEl.classList.add(enterSide);
+    void inEl.offsetWidth;                       // commit the off-screen start
+    inEl.classList.remove('no-anim', 'slide-left', 'slide-right');
+    inEl.classList.add('active');
+  }
+
   current = name;
 
-  document.querySelectorAll('.view-ph').forEach((el) => {
-    el.classList.toggle('active', el.dataset.view === name);
-  });
   document.querySelectorAll('#nav .navbtn').forEach((b) => {
     const on = b.dataset.view === name;
     b.classList.toggle('active', on);
@@ -54,16 +82,8 @@ export function currentView() { return current; }
 export function initNav() {
   const btns = [...document.querySelectorAll('#nav .navbtn')];
 
-  // Give each overlay a resting side so it slides in from the direction of its
-  // nav button: tabs before the centre (map) rest off-screen left, tabs after
-  // it rest off-screen right.
-  const centerIdx = btns.findIndex((b) => b.dataset.view === 'map');
-  btns.forEach((b, i) => {
-    const v = views[b.dataset.view];
-    if (v && v.el && b.dataset.view !== 'map') {
-      v.el.classList.add(i < centerIdx ? 'from-left' : 'from-right');
-    }
-  });
+  // Record each tab's position so showView knows which way to slide.
+  btns.forEach((b, i) => { order[b.dataset.view] = i; });
 
   btns.forEach((b) => {
     b.addEventListener('click', () => showView(b.dataset.view));

@@ -513,12 +513,16 @@
       background: radial-gradient(120% 90% at 50% 35%, #ffffff, var(--bg));
       color: var(--ink);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      opacity: 0; pointer-events: none; will-change: transform;
-      transition: transform .26s cubic-bezier(.22,.61,.36,1), opacity .26s ease;
+      transform: translateX(100%); pointer-events: none; will-change: transform;
+      transition: transform .30s cubic-bezier(.4, 0, .2, 1);   /* smooth ease-in-out slide */
     }
-    .view-ph.from-left  { transform: translateX(-100%); }
-    .view-ph.from-right { transform: translateX(100%); }
-    .view-ph.active { transform: translateX(0); opacity: 1; pointer-events: auto; }
+    /* Off-screen resting positions, applied per-transition by the router so a
+       tab always slides in from the direction of travel (a filmstrip). Panels
+       are opaque, so two adjacent ones tile with no gap — no map peeks through. */
+    .view-ph.slide-left  { transform: translateX(-100%); }
+    .view-ph.slide-right { transform: translateX(100%); }
+    .view-ph.active { transform: translateX(0); pointer-events: auto; }
+    .view-ph.no-anim { transition: none; }   /* jump to the start side without animating */
     .view-ph .ph-emoji { font-size: 54px; margin-bottom: 14px; }
     .view-ph h2 { margin: 0 0 8px; font-size: 21px; letter-spacing: .01em; }
     .view-ph p { margin: 0; color: var(--muted); font-size: 14px; max-width: 300px; line-height: 1.55; }
