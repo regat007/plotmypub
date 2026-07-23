@@ -14,7 +14,7 @@
  * CACHE_VERSION is only needed to purge the old cache, not to avoid staleness.
  */
 
-const CACHE_VERSION = 'plotmypub-v2';
+const CACHE_VERSION = 'plotmypub-v3';
 
 const SHELL = [
   '/',
