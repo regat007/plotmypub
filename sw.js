@@ -6,10 +6,15 @@
  *   - Google Maps JS API and tiles (Google's ToS forbids caching tiles)
  * Everything not explicitly listed below goes straight to the network.
  *
- * Bump CACHE_VERSION on every deploy that changes index.html.
+ * Caching strategy:
+ *   - navigations (index.html): network-first, so a fresh deploy lands at once
+ *   - other same-origin assets: stale-while-revalidate, so they serve instantly
+ *     from cache but refresh in the background for next load
+ * That means a deploy is always picked up within one extra load, so bumping
+ * CACHE_VERSION is only needed to purge the old cache, not to avoid staleness.
  */
 
-const CACHE_VERSION = 'plotmypub-v1';
+const CACHE_VERSION = 'plotmypub-v2';
 
 const SHELL = [
   '/',
@@ -88,17 +93,20 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
-  // Static same-origin assets: cache first.
+  // Static same-origin assets: stale-while-revalidate.
+  // Serve the cached copy immediately when we have one, and refresh it in the
+  // background so the next load gets the newest version. This is what lets us
+  // split the app into separate .css/.mjs files without a staleness trap.
   e.respondWith(
     caches.match(req).then(function (hit) {
-      if (hit) return hit;
-      return fetch(req).then(function (res) {
+      const fetching = fetch(req).then(function (res) {
         if (res && res.status === 200 && res.type === 'basic') {
           const copy = res.clone();
           caches.open(CACHE_VERSION).then(function (c) { c.put(req, copy); });
         }
         return res;
-      });
+      }).catch(function () { return hit; });   // offline → fall back to cache
+      return hit || fetching;
     })
   );
 });
