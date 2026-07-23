@@ -19,6 +19,13 @@ const CACHE_VERSION = 'plotmypub-v2';
 const SHELL = [
   '/',
   '/index.html',
+  '/styles.css',
+  '/js/app.mjs',
+  '/js/config.mjs',
+  '/js/core.mjs',
+  '/js/api.mjs',
+  '/js/auth.mjs',
+  '/js/map.mjs',
   '/manifest.webmanifest',
   '/favicon.svg',
   '/favicon.ico',
