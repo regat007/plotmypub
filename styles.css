@@ -90,7 +90,7 @@
     }
 
     /* ---------- map app (ported from page.html) ---------- */
-    #app{ position:fixed; inset:0; }
+    #app{ position:fixed; inset:0; overflow:hidden; }  /* clips off-screen tab overlays mid-slide */
     #map { height: 100%; width: 100%; }
 
     #panel {
@@ -487,29 +487,38 @@
     .navbtn:hover .navicon { transform: translateY(-1px); }
     .navbtn.active { color: var(--slate); }
 
-    /* elevated centre button = the Map (home) tab, à la the Battle button */
+    /* elevated centre button = the Map (home) tab, à la the Battle button.
+       No label — its size alone marks it as the main/home screen. */
+    .navbtn-center { flex: 0 0 auto; }
     .navbtn-center .navicon {
-      width: 50px; height: 50px; margin-top: -22px; margin-bottom: 1px;
+      width: 62px; height: 62px; margin-top: -30px; margin-bottom: 1px;
       border-radius: 50%; background: var(--slate); color: #fff;
-      display: flex; align-items: center; justify-content: center; font-size: 24px;
-      border: 3px solid var(--card); box-shadow: 0 5px 16px rgba(47,79,79,.45);
+      display: flex; align-items: center; justify-content: center; font-size: 30px;
+      border: 3px solid var(--card); box-shadow: 0 6px 18px rgba(47,79,79,.45);
     }
     .navbtn-center.active .navicon { background: var(--slate-d); }
     .navbtn-center:hover .navicon { transform: translateY(-2px); }
-    .navbtn-center .navlab { color: var(--slate); }
 
     /* ---------- placeholder ("coming soon") tab views ---------- */
-    /* Full-screen overlays above the map + its chrome (z 12), below the nav (15). */
+    /* Full-screen overlays above the map + its chrome (z 12), below the nav (15).
+       They are always laid out; visibility is driven by transform + opacity so
+       tab switches SLIDE rather than snap. Each view rests off-screen on the side
+       its nav button sits (tabs left of the map slide in from the left, tabs to
+       the right slide in from the right) and translates to 0 when active. */
     .view-ph {
-      position: absolute; inset: 0; z-index: 12; display: none;
+      position: absolute; inset: 0; z-index: 12; display: flex;
       flex-direction: column; align-items: center; justify-content: center;
       text-align: center; padding: 24px;
       padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 40px);
       background: radial-gradient(120% 90% at 50% 35%, #ffffff, var(--bg));
       color: var(--ink);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      opacity: 0; pointer-events: none; will-change: transform;
+      transition: transform .26s cubic-bezier(.22,.61,.36,1), opacity .26s ease;
     }
-    .view-ph.active { display: flex; }
+    .view-ph.from-left  { transform: translateX(-100%); }
+    .view-ph.from-right { transform: translateX(100%); }
+    .view-ph.active { transform: translateX(0); opacity: 1; pointer-events: auto; }
     .view-ph .ph-emoji { font-size: 54px; margin-bottom: 14px; }
     .view-ph h2 { margin: 0 0 8px; font-size: 21px; letter-spacing: .01em; }
     .view-ph p { margin: 0; color: var(--muted); font-size: 14px; max-width: 300px; line-height: 1.55; }

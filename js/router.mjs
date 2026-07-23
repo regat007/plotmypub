@@ -52,7 +52,20 @@ export function currentView() { return current; }
 
 /** Wire the nav buttons and land on the map. Call once at boot. */
 export function initNav() {
-  document.querySelectorAll('#nav .navbtn').forEach((b) => {
+  const btns = [...document.querySelectorAll('#nav .navbtn')];
+
+  // Give each overlay a resting side so it slides in from the direction of its
+  // nav button: tabs before the centre (map) rest off-screen left, tabs after
+  // it rest off-screen right.
+  const centerIdx = btns.findIndex((b) => b.dataset.view === 'map');
+  btns.forEach((b, i) => {
+    const v = views[b.dataset.view];
+    if (v && v.el && b.dataset.view !== 'map') {
+      v.el.classList.add(i < centerIdx ? 'from-left' : 'from-right');
+    }
+  });
+
+  btns.forEach((b) => {
     b.addEventListener('click', () => showView(b.dataset.view));
   });
   showView('map');
