@@ -14,7 +14,7 @@
  * CACHE_VERSION is only needed to purge the old cache, not to avoid staleness.
  */
 
-const CACHE_VERSION = 'plotmypub-v3';
+const CACHE_VERSION = 'plotmypub-v4';
 
 const SHELL = [
   '/',
@@ -52,6 +52,11 @@ const NEVER_CACHE = [
 ];
 
 self.addEventListener('install', function (e) {
+  // NB: we deliberately do NOT call skipWaiting() here. A freshly installed
+  // worker stays "waiting" until the page tells it to take over — either the
+  // user taps "Refresh" in the update banner (which posts SKIP_WAITING, handled
+  // below), or an older client's auto-update logic does the same. That keeps
+  // updates from reloading the app out from under someone mid-rating.
   e.waitUntil(
     caches.open(CACHE_VERSION)
       // addAll fails the whole install if one file 404s; be forgiving.
@@ -60,7 +65,6 @@ self.addEventListener('install', function (e) {
           return c.add(url).catch(function () { /* skip missing asset */ });
         }));
       })
-      .then(function () { return self.skipWaiting(); })
   );
 });
 
