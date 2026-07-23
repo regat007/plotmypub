@@ -501,10 +501,11 @@
 
     /* Feed tab = the relocated leaderboard + activity, as a full scrolling page */
     .view-ph.feed-view {
-      align-items: stretch; justify-content: flex-start;
+      align-items: stretch; justify-content: flex-start; text-align: left;
       padding: calc(env(safe-area-inset-top) + 20px) 16px 0;
       background: radial-gradient(120% 60% at 50% 0%, #ffffff, var(--bg));
     }
+    .feed-view #panel h1 { text-align: center; }   /* keep the title centred */
     .feed-view #panel {
       flex: 1 1 auto; width: 100%; max-width: 480px; margin: 0 auto; min-height: 0;
     }
