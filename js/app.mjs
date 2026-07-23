@@ -4,6 +4,16 @@
 
 import { sb } from './core.mjs';
 import { route } from './auth.mjs';
+import { registerView, initNav } from './router.mjs';
+// View modules self-register (and mount their placeholder) on import.
+import './views/feed.mjs';
+import './views/social.mjs';
+import './views/me.mjs';
+import './views/levels.mjs';
+
+// ---------- nav ----------
+registerView('map', {});   // the base layer; no overlay of its own
+initNav();
 
 // ---------- boot ----------
 // Maps JS is no longer loaded on the gate — it boots on demand in enterApp().

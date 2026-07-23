@@ -13,6 +13,7 @@ import {
   signedPhoto, uploadPhoto, setRatingPhotoPath, photoPath
 } from './api.mjs';
 import { loadGroups } from './auth.mjs';
+import { showView } from './router.mjs';
 
 // ===========================================================
 //  MAP APP
@@ -761,6 +762,7 @@ export async function enterApp() {
   document.body.className = 'app';
   $('gate').classList.add('hidden');
   $('app').classList.remove('hidden');
+  showView('map');            // always land on the map when entering
   rememberGroup();
   syncMapGroupBar();
   try {

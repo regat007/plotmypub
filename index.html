@@ -260,6 +260,24 @@
 
     <div id="lightbox"><img id="lightboxImg" alt="Pub photo"></div>
     <input id="iwPhotoInput" type="file" accept="image/*" style="display:none">
+
+    <nav id="nav" role="tablist" aria-label="Main">
+      <button class="navbtn" type="button" data-view="feed" role="tab" aria-selected="false">
+        <span class="navicon">📰</span><span class="navlab">Feed</span>
+      </button>
+      <button class="navbtn" type="button" data-view="social" role="tab" aria-selected="false">
+        <span class="navicon">👥</span><span class="navlab">Social</span>
+      </button>
+      <button class="navbtn navbtn-center active" type="button" data-view="map" role="tab" aria-selected="true">
+        <span class="navicon">🍺</span><span class="navlab">Map</span>
+      </button>
+      <button class="navbtn" type="button" data-view="me" role="tab" aria-selected="false">
+        <span class="navicon">🙂</span><span class="navlab">Me</span>
+      </button>
+      <button class="navbtn" type="button" data-view="levels" role="tab" aria-selected="false">
+        <span class="navicon">🏆</span><span class="navlab">Levels</span>
+      </button>
+    </nav>
   </div>
 
   <script type="module" src="/js/app.mjs"></script>

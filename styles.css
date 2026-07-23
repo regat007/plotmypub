@@ -2,6 +2,7 @@
       --slate:#2F4F4F; --slate-d:#243c3c; --ink:#14213d;
       --line:#e3e3e0; --muted:#6b7280; --bg:#f6f5f2; --card:#ffffff;
       --bad:#b3261e; --good:#0F6E56;
+      --nav-h:58px;   /* bottom nav bar height, excluding the safe-area inset */
     }
     *{box-sizing:border-box}
     html,body{margin:0;height:100%}
@@ -244,7 +245,7 @@
     }
     #addBtn:hover { background: var(--slate-d); }
     #form {
-      position: absolute; top: 12px; right: 12px; z-index: 6; display: none;
+      position: absolute; top: 12px; right: 12px; z-index: 20; display: none;
       flex-direction: column;
       background: #fff; border-radius: 12px; width: 320px;
       box-shadow: 0 10px 34px rgba(0,0,0,.28); font-size: 13px; color: var(--ink);
@@ -412,10 +413,10 @@
     /* mobile */
     @media (max-width: 640px) {
       #panel {
-        top: auto; bottom: 0; left: 0; right: 0;
+        top: auto; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 8px); left: 0; right: 0;
         border-radius: 16px 16px 0 0;
         max-height: 55vh; min-width: 0;
-        padding: 4px 16px calc(14px + env(safe-area-inset-bottom));
+        padding: 4px 16px 14px;
         box-shadow: 0 -4px 24px rgba(0,0,0,.18);
         transition: max-height .2s ease;
         display: flex; flex-direction: column; overflow: hidden;
@@ -435,11 +436,11 @@
       #panel.collapsed h1::after { transform: rotate(180deg); }
 
       #fabs {
-        top: auto; bottom: calc(55vh + 12px); right: 12px;
+        top: auto; bottom: calc(55vh + var(--nav-h) + env(safe-area-inset-bottom) + 20px); right: 12px;
         flex-direction: column-reverse; align-items: flex-end;
         transition: bottom .2s ease;
       }
-      #panel.collapsed ~ #fabs { bottom: calc(70px + env(safe-area-inset-bottom)); }
+      #panel.collapsed ~ #fabs { bottom: calc(78px + var(--nav-h) + env(safe-area-inset-bottom)); }
       #addBtn { padding: 13px 20px; font-size: 15px; box-shadow: 0 4px 16px rgba(0,0,0,.3); }
 
       #form {
@@ -460,4 +461,60 @@
       #board .nm { max-width: none; }
       #formBtns button { padding: 12px; font-size: 15px; }
       #err { bottom: auto; top: 12px; left: 12px; right: 12px; }
+    }
+
+    /* ---------- bottom navigation (Clash-Royale-style tab bar) ---------- */
+    /* Lives inside #app, so it is hidden with the map app on the gate. Fixed to
+       the viewport and centred; on phones width:100% makes it span edge-to-edge. */
+    #nav {
+      position: fixed; left: 50%; transform: translateX(-50%); bottom: 0;
+      z-index: 15; width: 100%; max-width: 480px;
+      display: flex; align-items: flex-end; justify-content: space-around;
+      background: var(--card); border: 1px solid var(--line); border-bottom: 0;
+      border-radius: 18px 18px 0 0;
+      padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+      box-shadow: 0 -3px 18px rgba(0,0,0,.10);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .navbtn {
+      flex: 1; border: 0; background: none; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 4px 2px; font-family: inherit; color: var(--muted);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .navbtn .navicon { font-size: 21px; line-height: 1; transition: transform .15s ease; }
+    .navbtn .navlab { font-size: 10px; font-weight: bold; letter-spacing: .02em; }
+    .navbtn:hover .navicon { transform: translateY(-1px); }
+    .navbtn.active { color: var(--slate); }
+
+    /* elevated centre button = the Map (home) tab, à la the Battle button */
+    .navbtn-center .navicon {
+      width: 50px; height: 50px; margin-top: -22px; margin-bottom: 1px;
+      border-radius: 50%; background: var(--slate); color: #fff;
+      display: flex; align-items: center; justify-content: center; font-size: 24px;
+      border: 3px solid var(--card); box-shadow: 0 5px 16px rgba(47,79,79,.45);
+    }
+    .navbtn-center.active .navicon { background: var(--slate-d); }
+    .navbtn-center:hover .navicon { transform: translateY(-2px); }
+    .navbtn-center .navlab { color: var(--slate); }
+
+    /* ---------- placeholder ("coming soon") tab views ---------- */
+    /* Full-screen overlays above the map + its chrome (z 12), below the nav (15). */
+    .view-ph {
+      position: absolute; inset: 0; z-index: 12; display: none;
+      flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 24px;
+      padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 40px);
+      background: radial-gradient(120% 90% at 50% 35%, #ffffff, var(--bg));
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .view-ph.active { display: flex; }
+    .view-ph .ph-emoji { font-size: 54px; margin-bottom: 14px; }
+    .view-ph h2 { margin: 0 0 8px; font-size: 21px; letter-spacing: .01em; }
+    .view-ph p { margin: 0; color: var(--muted); font-size: 14px; max-width: 300px; line-height: 1.55; }
+    .ph-soon {
+      margin-top: 18px; font-size: 11px; font-weight: bold; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--slate); background: #fff;
+      border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px;
     }
