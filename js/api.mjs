@@ -229,6 +229,29 @@ export async function fetchXpTotals() {
   return map;
 }
 
+/** getAchievements(): which badges the signed-in profile has unlocked in the
+ *  active group. Reads the same xp_events ledger (type 'ach:<code>'); returns a
+ *  { code: earnedAtMs } map of *earned* badges only. Fails soft to {} so a
+ *  not-yet-pushed migration just renders every badge locked. */
+export async function fetchAchievements() {
+  const gid = S.ACTIVE_GROUP.id;
+  const pid = S.PROFILE.id;
+  const { data, error } = await sb
+    .from('xp_events')
+    .select('type,created_at')
+    .eq('group_id', gid)
+    .eq('profile_id', pid)
+    .like('type', 'ach:%');
+  if (error) { console.warn(error); return {}; }
+  const earned = {};
+  (data || []).forEach((e) => {
+    const code = e.type.slice(4);            // strip 'ach:'
+    const at = e.created_at ? new Date(e.created_at).getTime() : null;
+    if (!(code in earned) || (at && at < earned[code])) earned[code] = at;
+  });
+  return earned;
+}
+
 // ---------- photos (Phase 6) ----------
 var PHOTO_BUCKET = 'pub-photos';
 

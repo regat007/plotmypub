@@ -9,21 +9,57 @@
 import { registerView } from '../router.mjs';
 import { S, escapeHtml } from '../core.mjs';
 import { TIERS, tierIndexFor, progress, XP_LABELS } from '../xp.mjs';
-import { fetchXp } from '../api.mjs';
+import { ACHIEVEMENTS, RARITY, RARITY_ORDER, isHidden, TOTAL } from '../achievements.mjs';
+import { fetchXp, fetchAchievements } from '../api.mjs';
 
 const el = document.querySelector('.view-ph[data-view="levels"]');
 
-// Locked placeholder — achievements will feed the same XP ledger (type='achievement').
-const ACHIEVEMENTS_HTML =
-  '<div class="sec-label">Achievements</div>' +
-  '<div class="locked" aria-disabled="true">' +
-    '<span class="lock">🔒</span>' +
-    '<div class="locked-body">' +
-      '<div class="locked-title">Coming soon</div>' +
-      '<div class="locked-sub">Badges to earn as you drink your way toward ' +
-        escapeHtml(TIERS[TIERS.length - 1].title) + '.</div>' +
-    '</div>' +
+// ---- Achievements grid --------------------------------------------------
+// A badge = a rarity-framed medallion (blue/amber/purple/gold) over its emoji.
+// Locked badges are greyed; Epic/Legendary hide their objective until earned;
+// unlocked Epic/Legendary gain a premium card. Mirrors the approved demo.
+function achMedal(a, shown) {
+  const hidden = !shown && isHidden(a.rarity);
+  const face = hidden
+    ? '<span class="ach-emoji q">?</span>'
+    : '<span class="ach-emoji">' + a.emoji + '</span>';
+  return '<div class="ach-medal ' + a.rarity + '">' +
+    '<div class="ach-rays"></div>' +
+    '<div class="ach-ring"><div class="ach-disc">' + face + '<span class="ach-gloss"></span></div></div>' +
+    '<span class="ach-lock">🔒</span>' +
   '</div>';
+}
+
+function achCard(a, earned) {
+  const shown = !!earned[a.code];
+  const locked = !shown;
+  const hidden = locked && isHidden(a.rarity);
+  const r = RARITY[a.rarity];
+  const obj = hidden ? 'Hidden — unlock to reveal' : a.objective;
+  const premium = shown && isHidden(a.rarity) ? ' ach-card-' + a.rarity : '';
+  return '<div class="ach-badge ' + a.rarity + (locked ? ' ach-locked' : '') + premium + '">' +
+    achMedal(a, shown) +
+    '<div class="ach-name">' + escapeHtml(a.name) + '</div>' +
+    '<div class="ach-meta"><span class="ach-chip ' + a.rarity + '">' + r.label + '</span>' +
+      '<span class="ach-xp">+' + r.xp + '</span></div>' +
+    '<div class="ach-obj">' + escapeHtml(obj) + '</div>' +
+    (a.title ? '<div class="ach-tag">Title · held by one</div>' : '') +
+  '</div>';
+}
+
+function achievementsHtml(earned) {
+  const got = ACHIEVEMENTS.filter((a) => earned[a.code]).length;
+  const sections = RARITY_ORDER.map((k) => {
+    const items = ACHIEVEMENTS.filter((a) => a.rarity === k);
+    if (!items.length) return '';
+    return '<div class="ach-rar-label ' + k + '">' + RARITY[k].label +
+      ' · +' + RARITY[k].xp + ' XP</div>' +
+      '<div class="ach-grid">' + items.map((a) => achCard(a, earned)).join('') + '</div>';
+  }).join('');
+  return '<div class="ach-head"><div class="sec-label">Achievements</div>' +
+    '<div class="ach-count">' + got + ' / ' + TOTAL + '</div></div>' +
+    sections;
+}
 
 function fmt(n) { return Math.round(n).toLocaleString('en-GB'); }
 
@@ -126,7 +162,12 @@ async function render() {
   page.innerHTML = '<div class="lv-loading">Loading…</div>';
 
   let data;
-  try { data = await fetchXp(); }
+  let earned = {};
+  try {
+    // achievements fail soft to {} on their own, so only fetchXp can reject here
+    const [xpData, ach] = await Promise.all([fetchXp(), fetchAchievements()]);
+    data = xpData; earned = ach || {};
+  }
   catch (e) {
     if (token !== loadToken) return;
     page.innerHTML = '<div class="lv-loading">Could not load your XP.</div>';
@@ -144,7 +185,7 @@ async function render() {
         '<div class="lv-empty-title">' + escapeHtml(TIERS[0].title) + '</div>' +
         '<div class="lv-empty-sub">Rate your first pub to start earning XP and begin the climb toward ' +
           escapeHtml(TIERS[TIERS.length - 1].title) + '.</div>' +
-      '</div>' + ACHIEVEMENTS_HTML;
+      '</div>' + achievementsHtml(earned);
     return;
   }
 
@@ -158,7 +199,7 @@ async function render() {
     (rows.length
       ? '<div class="sec-label">Recent XP</div><div class="lv-feed">' + feedHtml(rows) + '</div>'
       : '') +
-    ACHIEVEMENTS_HTML;
+    achievementsHtml(earned);
 }
 
 // The tier ladder is tucked away by default; tapping your level reveals it.

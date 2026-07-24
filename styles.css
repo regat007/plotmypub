@@ -997,3 +997,144 @@
     .lv-empty-title { font-size: 17px; font-weight: bold; color: var(--ink); margin-bottom: 8px; }
     .lv-empty-sub { font-size: 13px; color: var(--muted); line-height: 1.55;
       max-width: 300px; margin: 0 auto; }
+
+    /* ========================================================================
+       Achievements grid — rarity-framed medallions (ported from the approved
+       demo). Rarity + metallic-frame tokens are scoped here so they inherit to
+       every badge without touching :root. See js/achievements.mjs.
+       ==================================================================== */
+    .levels-view {
+      --ach-common:#3f6ea6; --ach-common-bg:#eef3f9;
+      --ach-rare:#d47f27;   --ach-rare-bg:#fbf1e6;
+      --ach-epic:#7b4bc4;   --ach-epic-bg:#f2ecfb;
+      --ach-legend:#c39a2b; --ach-legend-hi:#f0d878; --ach-legend-bg:#fbf5e2;
+      --m-common:conic-gradient(from 200deg,#dbe7f4,#6f95bd,#345d8a,#8fadcf,#345d8a,#6f95bd,#dbe7f4);
+      --m-rare:conic-gradient(from 200deg,#f7ddb6,#d99a4e,#a2611a,#e8b877,#a2611a,#d99a4e,#f7ddb6);
+      --m-epic:conic-gradient(from 200deg,#e8d5fb,#9b6fd6,#5a33a0,#b48ee2,#5a33a0,#9b6fd6,#e8d5fb);
+      --m-legend:conic-gradient(from 200deg,#fff4c9,#ecc85e,#956c11,#fbe38f,#956c11,#ecc85e,#fff4c9);
+      --m-lock:conic-gradient(from 200deg,#dedcd7,#a8a6a0,#c8c6c0,#a8a6a0,#dedcd7);
+      --ray-epic:rgba(123,75,196,.55); --ray-legend:rgba(230,182,60,.75);
+    }
+    .levels-view .ach-head { display: flex; align-items: baseline; justify-content: space-between; }
+    .levels-view .ach-count { font-size: 12px; font-weight: bold; color: var(--muted);
+      font-variant-numeric: tabular-nums; margin-right: 4px; }
+    .levels-view .ach-rar-label { font-size: 11px; font-weight: bold; letter-spacing: .05em;
+      text-transform: uppercase; margin: 16px 4px 9px; font-variant-numeric: tabular-nums; }
+    .levels-view .ach-rar-label.common { color: var(--ach-common); }
+    .levels-view .ach-rar-label.rare { color: var(--ach-rare); }
+    .levels-view .ach-rar-label.epic { color: var(--ach-epic); }
+    .levels-view .ach-rar-label.legendary { color: var(--ach-legend); }
+
+    .levels-view .ach-grid { display: grid; gap: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+
+    /* ---- badge card ---- */
+    .levels-view .ach-badge { position: relative; background: var(--card);
+      border: 1px solid var(--line); border-radius: 14px; padding: 18px 12px 14px;
+      text-align: center; box-shadow: 0 1px 2px rgba(20,33,61,.05); overflow: hidden; }
+    .levels-view .ach-name { margin-top: 13px; font-size: 13.5px; font-weight: bold;
+      color: var(--ink); line-height: 1.2; }
+    .levels-view .ach-meta { display: flex; align-items: center; justify-content: center;
+      gap: 6px; margin-top: 5px; }
+    .levels-view .ach-chip { font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase;
+      font-weight: bold; padding: 2px 7px; border-radius: 999px; }
+    .levels-view .ach-chip.common { color: var(--ach-common); background: var(--ach-common-bg); }
+    .levels-view .ach-chip.rare { color: var(--ach-rare); background: var(--ach-rare-bg); }
+    .levels-view .ach-chip.epic { color: var(--ach-epic); background: var(--ach-epic-bg); }
+    .levels-view .ach-chip.legendary { color: var(--ach-legend); background: var(--ach-legend-bg); }
+    .levels-view .ach-xp { font-size: 11px; color: var(--muted); font-weight: bold;
+      font-variant-numeric: tabular-nums; }
+    .levels-view .ach-obj { margin-top: 8px; font-size: 11.5px; color: var(--muted);
+      line-height: 1.4; min-height: 2.4em; }
+    .levels-view .ach-tag { position: relative; z-index: 1; display: inline-block; margin-top: 8px;
+      font-size: 9.5px; font-weight: bold; letter-spacing: .04em; text-transform: uppercase;
+      color: var(--slate); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
+
+    /* premium card — only once unlocked */
+    .levels-view .ach-card-epic { background: linear-gradient(165deg, var(--ach-epic-bg), var(--card) 70%);
+      border-color: rgba(123,75,196,.32); }
+    .levels-view .ach-card-legendary { background: linear-gradient(160deg,#2b3d3f,#1b2a2b);
+      border-color: rgba(195,154,43,.5); }
+    .levels-view .ach-card-legendary .ach-name { color: #fff; }
+    .levels-view .ach-card-legendary .ach-obj { color: #c6d3d0; }
+    .levels-view .ach-card-legendary .ach-chip.legendary { color: #1b2a2b;
+      background: linear-gradient(var(--ach-legend-hi), var(--ach-legend)); }
+    .levels-view .ach-card-legendary .ach-xp { color: var(--ach-legend-hi); }
+    .levels-view .ach-card-legendary .ach-tag { color: var(--ach-legend-hi);
+      border-color: rgba(240,216,120,.4); }
+    .levels-view .ach-card-legendary::before { content: ""; position: absolute; inset: 0;
+      pointer-events: none; background: radial-gradient(120% 80% at 50% -10%, rgba(240,216,120,.16), transparent 60%); }
+
+    /* ---- the medallion ---- */
+    .levels-view .ach-medal { position: relative; width: 84px; height: 84px; margin: 0 auto;
+      display: grid; place-items: center; z-index: 1; }
+    .levels-view .ach-rays { position: absolute; inset: -9px; border-radius: 50%; z-index: 0; opacity: 0;
+      background: repeating-conic-gradient(from 0deg, var(--ray, transparent) 0deg 5deg, transparent 5deg 17deg);
+      -webkit-mask: radial-gradient(circle, transparent 33%, #000 45%, transparent 72%);
+              mask: radial-gradient(circle, transparent 33%, #000 45%, transparent 72%);
+      animation: ach-spin 34s linear infinite; }
+    .levels-view .ach-ring { position: relative; z-index: 2; width: 76px; height: 76px; border-radius: 50%;
+      padding: 6px; background: var(--metal, var(--m-common));
+      box-shadow: 0 3px 7px rgba(0,0,0,.28), inset 0 2px 2px rgba(255,255,255,.55), inset 0 -3px 5px rgba(0,0,0,.32); }
+    .levels-view .ach-disc { position: relative; width: 100%; height: 100%; border-radius: 50%;
+      display: grid; place-items: center; font-size: 31px; overflow: hidden;
+      background: var(--disc, radial-gradient(circle at 50% 34%, #fff, var(--ach-common-bg)));
+      box-shadow: inset 0 3px 6px rgba(255,255,255,.45), inset 0 -6px 9px rgba(0,0,0,.14); }
+    .levels-view .ach-emoji { position: relative; z-index: 2; line-height: 1;
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,.22)); }
+    .levels-view .ach-emoji.q { font-weight: bold; color: var(--muted); font-size: 30px; filter: none; }
+    .levels-view .ach-gloss { position: absolute; top: -42%; left: -8%; width: 116%; height: 78%;
+      border-radius: 50%; z-index: 1; pointer-events: none; opacity: .7;
+      background: linear-gradient(180deg, rgba(255,255,255,.65), rgba(255,255,255,0)); }
+
+    .levels-view .ach-medal.common { --metal: var(--m-common); --disc: radial-gradient(circle at 50% 34%, #fff, var(--ach-common-bg)); }
+    .levels-view .ach-medal.rare { --metal: var(--m-rare); --disc: radial-gradient(circle at 50% 34%, #fff, var(--ach-rare-bg)); }
+    .levels-view .ach-medal.epic { --metal: var(--m-epic); --disc: radial-gradient(circle at 50% 34%, #fff, var(--ach-epic-bg)); }
+    .levels-view .ach-medal.legendary { --metal: var(--m-legend); --disc: radial-gradient(circle at 50% 34%, #fff, var(--ach-legend-bg)); }
+    .levels-view .ach-medal.epic .ach-rays { --ray: var(--ray-epic); opacity: .5; inset: -1px;
+      -webkit-mask: radial-gradient(circle, transparent 41%, #000 47%, transparent 55%);
+              mask: radial-gradient(circle, transparent 41%, #000 47%, transparent 55%); }
+    .levels-view .ach-medal.legendary .ach-rays { --ray: var(--ray-legend); opacity: .85; }
+
+    /* periodic shine sweep on epic + legendary */
+    .levels-view .ach-medal.epic .ach-disc::after,
+    .levels-view .ach-medal.legendary .ach-disc::after { content: ""; position: absolute; top: 0;
+      left: -70%; width: 45%; height: 100%; z-index: 3; transform: skewX(-16deg);
+      background: linear-gradient(100deg, transparent, rgba(255,255,255,.6), transparent);
+      animation: ach-sheen 6s ease-in-out infinite; }
+
+    /* holographic rim — legendary only */
+    .levels-view .ach-medal.legendary .ach-ring::after { content: ""; position: absolute; inset: 0;
+      border-radius: 50%; z-index: 3; pointer-events: none; mix-blend-mode: screen; opacity: .55;
+      background: conic-gradient(from 0deg, transparent, rgba(255,208,120,.6), rgba(255,120,170,.55), rgba(150,130,255,.6), rgba(120,220,200,.6), transparent);
+      -webkit-mask: radial-gradient(circle, transparent 31px, #000 32px, #000 38px, transparent 39px);
+              mask: radial-gradient(circle, transparent 31px, #000 32px, #000 38px, transparent 39px);
+      animation: ach-spin 9s linear infinite; }
+
+    @keyframes ach-spin { to { transform: rotate(360deg); } }
+    @keyframes ach-sheen { 0% { left: -70%; } 22% { left: 135%; } 100% { left: 135%; } }
+
+    /* lock chip */
+    .levels-view .ach-lock { position: absolute; right: 3px; bottom: 3px; z-index: 5;
+      width: 22px; height: 22px; border-radius: 50%; background: var(--card); border: 1px solid var(--line);
+      display: none; place-items: center; font-size: 10.5px; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+
+    /* ---- locked state ---- */
+    .levels-view .ach-badge.ach-locked { border-style: dashed; }
+    .levels-view .ach-badge.ach-locked .ach-ring { background: var(--m-lock);
+      box-shadow: 0 2px 4px rgba(0,0,0,.15), inset 0 1px 1px rgba(255,255,255,.4), inset 0 -2px 4px rgba(0,0,0,.2); }
+    .levels-view .ach-badge.ach-locked .ach-disc { background: #e7e5e1; box-shadow: inset 0 2px 5px rgba(0,0,0,.12); }
+    .levels-view .ach-badge.ach-locked .ach-emoji { filter: grayscale(1); opacity: .3; }
+    .levels-view .ach-badge.ach-locked .ach-rays,
+    .levels-view .ach-badge.ach-locked .ach-gloss,
+    .levels-view .ach-badge.ach-locked .ach-disc::after,
+    .levels-view .ach-badge.ach-locked .ach-ring::after { display: none; }
+    .levels-view .ach-badge.ach-locked .ach-lock { display: grid; }
+    .levels-view .ach-badge.ach-locked .ach-name { color: var(--muted); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .levels-view .ach-rays,
+      .levels-view .ach-medal.legendary .ach-ring::after { animation: none; }
+      .levels-view .ach-medal.epic .ach-disc::after,
+      .levels-view .ach-medal.legendary .ach-disc::after { display: none; }
+    }
