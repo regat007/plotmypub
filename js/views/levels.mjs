@@ -13,6 +13,18 @@ import { fetchXp } from '../api.mjs';
 
 const el = document.querySelector('.view-ph[data-view="levels"]');
 
+// Locked placeholder — achievements will feed the same XP ledger (type='achievement').
+const ACHIEVEMENTS_HTML =
+  '<div class="sec-label">Achievements</div>' +
+  '<div class="locked" aria-disabled="true">' +
+    '<span class="lock">🔒</span>' +
+    '<div class="locked-body">' +
+      '<div class="locked-title">Coming soon</div>' +
+      '<div class="locked-sub">Badges to earn as you drink your way toward ' +
+        escapeHtml(TIERS[TIERS.length - 1].title) + '.</div>' +
+    '</div>' +
+  '</div>';
+
 function fmt(n) { return Math.round(n).toLocaleString('en-GB'); }
 
 function timeAgo(ms) {
@@ -33,11 +45,12 @@ function groupEvents(events) {
   const byRef = new Map();
   const rows = [];
   events.forEach((e) => {
-    if (!e.refId) { rows.push({ at: e.at, total: e.amount, types: [e.type] }); return; }
+    if (!e.refId) { rows.push({ at: e.at, total: e.amount, types: [e.type], pub: e.pub || null }); return; }
     let g = byRef.get(e.refId);
-    if (!g) { g = { at: e.at, total: 0, types: [] }; byRef.set(e.refId, g); rows.push(g); }
+    if (!g) { g = { at: e.at, total: 0, types: [], pub: e.pub || null }; byRef.set(e.refId, g); rows.push(g); }
     g.total += e.amount;
     g.types.push(e.type);
+    if (e.pub && !g.pub) g.pub = e.pub;
     if (e.at && (!g.at || e.at > g.at)) g.at = e.at;
   });
   rows.sort((a, b) => (b.at || 0) - (a.at || 0));
@@ -51,7 +64,7 @@ function heroHtml(xp, pubs) {
   const p = progress(xp);
   const pct = Math.round(p.frac * 100);
   const foot = p.maxed
-    ? 'Maxed — <b>' + fmt(xp) + '</b> XP, ' + fmt(p.done) + ' past Pub Legend'
+    ? 'Maxed — <b>' + fmt(xp) + '</b> XP, ' + fmt(p.done) + ' past ' + escapeHtml(cur.title)
     : '<b>' + fmt(xp) + '</b> XP · ' + fmt(p.remaining) + ' to ' + escapeHtml(nxt.title);
   return '' +
     '<div class="lv-hero" id="lvHero" role="button" tabindex="0" aria-expanded="false" aria-controls="lvTiers">' +
@@ -86,18 +99,20 @@ function ladderHtml(xp) {
   }).join('');
 }
 
+// One tight row per earning moment: the pub that earned it, a muted line of the
+// bonus reasons (the base "Rated a pub" is implied by naming the pub) + when.
+const BONUS_LABELS = { first_map: 'First to map', new_area: 'New area', with_note: 'Note', with_photo: 'Photo' };
+
 function feedHtml(rows) {
   return rows.slice(0, 12).map((r) => {
     const hasBase = r.types.indexOf('rate_pub') !== -1;
-    const bonuses = r.types.filter((t) => t !== 'rate_pub');
-    const primary = hasBase ? XP_LABELS.rate_pub : (XP_LABELS[r.types[0]] || r.types[0]);
-    const extra = (hasBase ? bonuses : r.types.slice(1)).map((t) => XP_LABELS[t] || t);
-    const chips = extra.map((l) => '<span class="lv-ev-chip">' + escapeHtml(l) + '</span>').join('');
+    const title = r.pub || (hasBase ? XP_LABELS.rate_pub : (XP_LABELS[r.types[0]] || r.types[0]));
+    const bonuses = r.types.filter((t) => t !== 'rate_pub').map((t) => BONUS_LABELS[t] || XP_LABELS[t] || t);
+    const bits = bonuses.concat(timeAgo(r.at) || []);   // reasons first, then time
     return '<div class="lv-ev">' +
       '<div class="lv-ev-body">' +
-        '<div class="lv-ev-title">' + escapeHtml(primary) + '</div>' +
-        '<div class="lv-ev-sub">' + chips +
-          '<span class="lv-ev-time">' + timeAgo(r.at) + '</span></div>' +
+        '<div class="lv-ev-title">' + escapeHtml(title) + '</div>' +
+        (bits.length ? '<div class="lv-ev-sub">' + escapeHtml(bits.join(' · ')) + '</div>' : '') +
       '</div>' +
       '<div class="lv-ev-amt">+' + fmt(r.total) + '</div>' +
     '</div>';
@@ -125,10 +140,11 @@ async function render() {
   if (!xp) {
     page.innerHTML =
       '<div class="lv-empty">' +
-        '<div class="lv-empty-emoji">🌱</div>' +
-        '<div class="lv-empty-title">New in town</div>' +
-        '<div class="lv-empty-sub">Rate your first pub to start earning XP and begin the climb toward Pub Legend.</div>' +
-      '</div>';
+        '<div class="lv-empty-emoji">' + TIERS[0].icon + '</div>' +
+        '<div class="lv-empty-title">' + escapeHtml(TIERS[0].title) + '</div>' +
+        '<div class="lv-empty-sub">Rate your first pub to start earning XP and begin the climb toward ' +
+          escapeHtml(TIERS[TIERS.length - 1].title) + '.</div>' +
+      '</div>' + ACHIEVEMENTS_HTML;
     return;
   }
 
@@ -141,7 +157,8 @@ async function render() {
     '</div>' +
     (rows.length
       ? '<div class="sec-label">Recent XP</div><div class="lv-feed">' + feedHtml(rows) + '</div>'
-      : '');
+      : '') +
+    ACHIEVEMENTS_HTML;
 }
 
 // The tier ladder is tucked away by default; tapping your level reveals it.

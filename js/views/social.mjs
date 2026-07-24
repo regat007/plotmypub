@@ -7,7 +7,8 @@
 import { registerView } from '../router.mjs';
 import { S, colourFor, escapeHtml } from '../core.mjs';
 import { CATS } from '../config.mjs';
-import { fetchMembers, fetchPubs } from '../api.mjs';
+import { fetchMembers, fetchPubs, fetchXpTotals } from '../api.mjs';
+import { tierFor } from '../xp.mjs';
 
 const el = document.querySelector('.view-ph[data-view="social"]');
 
@@ -81,6 +82,54 @@ function renderHeader() {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); shareInvite(); }
     });
   }
+}
+
+// ---------- leaderboard (XP tiers across the group) ----------
+// Top 4 by default; tap the footer to expand to the whole group. Rows come from
+// the xp_totals view (fetchXpTotals); members with no XP yet show as Brand New.
+let boardRows = [];
+let boardExpanded = false;
+
+function boardRowHtml(r, rank) {
+  const you = r.you ? '<span class="youtag">you</span>' : '';
+  return '<div class="lb-row' + (r.you ? ' lb-you' : '') + '">' +
+    '<span class="lb-rank">' + rank + '</span>' +
+    '<span class="lb-ic" title="' + escapeHtml(r.tier.title) + '">' + r.tier.icon + '</span>' +
+    '<div class="lb-id">' +
+      '<div class="lb-name">' + escapeHtml(r.name) + you + '</div>' +
+      '<div class="lb-tier">' + escapeHtml(r.tier.title) + '</div>' +
+    '</div>' +
+    '<span class="lb-xp">' + r.xp.toLocaleString('en-GB') + '<small>XP</small></span>' +
+  '</div>';
+}
+
+function renderBoard() {
+  const box = document.getElementById('soBoard');
+  if (!box) return;
+  if (!boardRows.length) {
+    box.innerHTML = '<div class="lb-empty">Rate a pub to get on the board.</div>';
+    return;
+  }
+  const shown = boardExpanded ? boardRows : boardRows.slice(0, 4);
+  const list = shown.map((r, i) => boardRowHtml(r, i + 1)).join('');
+  const more = boardRows.length > 4
+    ? '<button class="lb-more" type="button">' +
+        (boardExpanded ? 'Show top 4' : 'Full leaderboard · ' + boardRows.length) +
+        '<span class="lb-more-chev">' + (boardExpanded ? '‹' : '›') + '</span></button>'
+    : '';
+  box.innerHTML = list + more;
+}
+
+function buildBoard(members, totals) {
+  const meId = S.PROFILE && S.PROFILE.id;
+  boardRows = members.map((m) => {
+    const xp = totals[m.id] || 0;
+    return { id: m.id, name: m.name, you: m.id === meId, xp, tier: tierFor(xp) };
+  });
+  // most XP first; ties broken alphabetically so the order is stable
+  boardRows.sort((a, b) => (b.xp - a.xp) || a.name.localeCompare(b.name));
+  boardExpanded = false;
+  renderBoard();
 }
 
 // ---------- members ----------
@@ -178,6 +227,11 @@ function renderMembers(box, members, stat) {
     : '<div class="mrow mrow-flat"><div class="mlast" style="padding:4px 2px">No members yet.</div></div>';
 }
 
+// expand/collapse the leaderboard between top-4 and the whole group
+el.addEventListener('click', (e) => {
+  if (e.target.closest('.lb-more')) { boardExpanded = !boardExpanded; renderBoard(); }
+});
+
 // one delegated click handler: expand/collapse a member's detail
 el.addEventListener('click', (e) => {
   const row = e.target.closest('.mrow');
@@ -197,16 +251,22 @@ async function render() {
   renderHeader();
   const box = document.getElementById('soMembers');
   box.innerHTML = '<div class="mrow mrow-flat"><div class="mlast" style="padding:4px 2px">Loading…</div></div>';
+  const boardBox = document.getElementById('soBoard');
+  if (boardBox) boardBox.innerHTML = '<div class="lb-empty">Loading…</div>';
 
-  let members = [], pubs = [];
+  let members = [], pubs = [], totals = {};
   try {
-    [members, pubs] = await Promise.all([fetchMembers(), fetchPubs()]);
+    [members, pubs, totals] = await Promise.all([
+      fetchMembers(), fetchPubs(), fetchXpTotals().catch(() => ({}))
+    ]);
   } catch (e) {
     if (token !== loadToken) return;
     box.innerHTML = '<div class="mrow mrow-flat"><div class="mlast" style="padding:4px 2px">Could not load your group.</div></div>';
     return;
   }
   if (token !== loadToken) return;           // a newer open superseded this one
+
+  buildBoard(members, totals);
 
   const sub = document.getElementById('soSub');
   if (sub) {

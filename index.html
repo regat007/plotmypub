@@ -182,14 +182,8 @@
       <div class="social-page">
         <div id="soHead"><!-- group header + invite, rendered by social.mjs --></div>
 
-        <div class="sec-label">Achievements</div>
-        <div class="locked" aria-disabled="true">
-          <span class="lock">🔒</span>
-          <div class="locked-body">
-            <div class="locked-title">Coming soon</div>
-            <div class="locked-sub"></div>
-          </div>
-        </div>
+        <div class="sec-label">Leaderboard</div>
+        <div class="lb" id="soBoard"></div>
 
         <div class="sec-label" id="soMembersLabel">Members</div>
         <div class="members" id="soMembers"></div>
@@ -245,6 +239,12 @@
     <div id="fabs">
       <button id="addBtn">+ Add a pub</button>
     </div>
+
+    <!-- minimalist XP badge (level icon + progress bar); tap to open Levels -->
+    <button id="mapXp" type="button" hidden aria-label="Your level">
+      <span class="mx-ic">🌱</span>
+      <span class="mx-bar"><i class="mx-fill"></i></span>
+    </button>
 
     <button id="locateBtn" type="button" aria-label="Centre map on my location" aria-pressed="false">
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">

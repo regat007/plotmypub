@@ -259,6 +259,26 @@
       box-shadow: 0 4px 14px rgba(0,0,0,.26);
     }
     #addBtn:hover { background: var(--slate-d); }
+    /* minimalist XP badge, top-right, tucked under the add-a-pub button */
+    #mapXp {
+      position: absolute; top: 64px; right: 12px; z-index: 5;
+      display: flex; align-items: center; gap: 8px;
+      background: #fff; border: 0; border-radius: 20px; padding: 7px 11px 7px 9px;
+      box-shadow: 0 3px 12px rgba(0,0,0,.22); cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    #mapXp:hover { box-shadow: 0 4px 16px rgba(0,0,0,.28); }
+    #mapXp[hidden] { display: none; }
+    #mapXp .mx-ic { font-size: 16px; line-height: 1; }
+    #mapXp .mx-bar {
+      width: 46px; height: 5px; border-radius: 999px;
+      background: var(--line); overflow: hidden;
+    }
+    #mapXp .mx-fill {
+      display: block; height: 100%; min-width: 2px; width: 0;
+      background: linear-gradient(90deg, var(--slate), var(--slate-d));
+      transition: width .4s ease;
+    }
     #locateBtn {
       position: absolute; bottom: 12px; left: 12px; z-index: 5;
       width: 48px; height: 48px; border-radius: 50%; border: 0; padding: 0;
@@ -618,22 +638,62 @@
     }
 
     /* achievements — locked placeholder until badges are built */
-    .social-view .locked {
+    .social-view .locked, .levels-view .locked {
       display: flex; align-items: center; gap: 13px;
       background: repeating-linear-gradient(135deg, var(--bg), var(--bg) 10px, #f1efe9 10px, #f1efe9 20px);
       border: 1px dashed #cfd2cd; border-radius: 14px; padding: 15px 16px;
     }
-    .social-view .locked .lock {
+    .social-view .locked .lock, .levels-view .locked .lock {
       flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%;
       background: #fff; border: 1px solid var(--line);
       display: flex; align-items: center; justify-content: center; font-size: 18px;
     }
-    .social-view .locked-body { min-width: 0; }
-    .social-view .locked-title {
+    .social-view .locked-body, .levels-view .locked-body { min-width: 0; }
+    .social-view .locked-title, .levels-view .locked-title {
       font-size: 13.5px; font-weight: bold; color: var(--slate);
       text-transform: uppercase; letter-spacing: .06em;
     }
-    .social-view .locked-sub { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+    .social-view .locked-sub, .levels-view .locked-sub { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+
+    /* leaderboard (XP tiers) */
+    .social-view .lb {
+      background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+    }
+    .social-view .lb-row {
+      display: flex; align-items: center; gap: 11px; padding: 10px 13px;
+      border-bottom: 1px solid #f2f2f0;
+    }
+    .social-view .lb-row:last-child { border-bottom: 0; }
+    .social-view .lb-you { background: rgba(47,79,79,.05); }
+    .social-view .lb-rank {
+      flex: 0 0 auto; width: 18px; text-align: center; font-weight: bold;
+      font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums;
+    }
+    .social-view .lb-ic { flex: 0 0 auto; font-size: 20px; line-height: 1; }
+    .social-view .lb-id { flex: 1; min-width: 0; }
+    .social-view .lb-name {
+      font-size: 14px; font-weight: bold; color: var(--ink);
+      display: flex; align-items: center; gap: 7px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .social-view .lb-tier { font-size: 11px; color: var(--muted); margin-top: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .social-view .lb-xp {
+      flex: 0 0 auto; font-size: 14px; font-weight: bold; color: var(--slate);
+      font-variant-numeric: tabular-nums;
+    }
+    .social-view .lb-xp small { font-size: 9.5px; font-weight: bold; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .04em; margin-left: 3px; }
+    .social-view .lb-more {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      width: 100%; border: 0; background: none; cursor: pointer;
+      padding: 11px; font-size: 12.5px; font-weight: bold; font-family: inherit;
+      color: var(--slate); text-transform: uppercase; letter-spacing: .04em;
+      border-top: 1px solid var(--line);
+    }
+    .social-view .lb-more:hover { background: var(--bg); }
+    .social-view .lb-more-chev { font-weight: normal; }
+    .social-view .lb-empty { padding: 16px 13px; font-size: 12.5px; color: var(--muted); }
 
     /* members list */
     .social-view .members {
@@ -913,19 +973,20 @@
     .lv-rung-fig small { display: block; font-size: 10.5px; font-weight: normal; color: var(--muted); }
 
     /* recent XP feed */
-    .lv-feed { display: flex; flex-direction: column; gap: 6px; }
+    .lv-feed { display: flex; flex-direction: column;
+      background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
     .lv-ev {
-      display: flex; align-items: center; gap: 10px;
-      background: var(--card); border: 1px solid var(--line); border-radius: 12px;
-      padding: 11px 13px;
+      display: flex; align-items: baseline; gap: 10px; padding: 8px 13px;
     }
-    .lv-ev-body { flex: 1; min-width: 0; }
-    .lv-ev-title { font-size: 13.5px; font-weight: bold; color: var(--ink); }
-    .lv-ev-sub { font-size: 11px; color: var(--muted); margin-top: 3px;
-      display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
-    .lv-ev-chip { background: var(--bg); border-radius: 6px; padding: 1px 6px; color: var(--muted); }
+    .lv-ev + .lv-ev { border-top: 1px solid var(--line); }
+    .lv-ev-body { flex: 1; min-width: 0;
+      display: flex; align-items: baseline; gap: 8px; }
+    .lv-ev-title { font-size: 13.5px; font-weight: bold; color: var(--ink);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lv-ev-sub { font-size: 11px; color: var(--muted); white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
     .lv-ev-amt { flex: 0 0 auto; font-weight: bold; color: var(--slate);
-      font-variant-numeric: tabular-nums; font-size: 15px; }
+      font-variant-numeric: tabular-nums; font-size: 14px; }
 
     /* empty state */
     .lv-empty { text-align: center; padding: 44px 20px 24px; }

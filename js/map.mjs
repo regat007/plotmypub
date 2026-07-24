@@ -14,6 +14,7 @@ import {
 } from './api.mjs';
 import { loadGroups } from './auth.mjs';
 import { showView, registerView } from './router.mjs';
+import { refreshMapXp } from './mapxp.mjs';
 
 // ===========================================================
 //  MAP APP
@@ -516,6 +517,7 @@ $('save').addEventListener('click', function () {
                  (saved.score == null ? '?' : saved.score.toFixed(2)), 'good');
       renderPubs();          // reload group data so averages/pins reflect the new rating
       loadActivity();
+      refreshMapXp();        // the rating may have earned XP — nudge the badge
       $('f_pub').value = '';
       $('f_area').value = '';
       $('f_note').value = '';
@@ -684,6 +686,7 @@ $('mapGroupSel').addEventListener('change', function () {
   rememberGroup();
   closeUserMenu();
   renderPubs();
+  refreshMapXp();            // switching group changes your XP badge too
 });
 
 // open/close the avatar menu; tap-away and Escape close it
@@ -889,6 +892,7 @@ export async function enterApp() {
   showView('map');            // always land on the map when entering
   rememberGroup();
   syncMapGroupBar();
+  refreshMapXp();             // paint the top-right level badge
   try {
     await loadGoogleMaps();
     if (!MAP) await initMap();

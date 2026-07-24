@@ -186,21 +186,47 @@ export async function fetchActivity(limit) {
 export async function fetchXp() {
   const gid = S.ACTIVE_GROUP.id;
   const pid = S.PROFILE.id;
-  const { data, error } = await sb
-    .from('xp_events')
-    .select('type,amount,ref_id,created_at')
-    .eq('group_id', gid)
-    .eq('profile_id', pid)
-    .order('created_at', { ascending: false });
-  if (error) { console.warn(error); return { xp: 0, events: [] }; }
-  const events = (data || []).map((e) => ({
+  // ledger rows + my own ratings (to name the pub each ref_id came from — there's
+  // no FK from xp_events.ref_id to ratings, so we look it up client-side).
+  const [xpRes, ratRes] = await Promise.all([
+    sb.from('xp_events')
+      .select('type,amount,ref_id,created_at')
+      .eq('group_id', gid)
+      .eq('profile_id', pid)
+      .order('created_at', { ascending: false }),
+    sb.from('ratings')
+      .select('id,pubs!inner(name)')
+      .eq('group_id', gid)
+      .eq('profile_id', pid)
+  ]);
+  if (xpRes.error) { console.warn(xpRes.error); return { xp: 0, events: [] }; }
+  const pubByRef = new Map();
+  (ratRes.data || []).forEach((r) => { if (r.pubs) pubByRef.set(r.id, r.pubs.name); });
+  const events = (xpRes.data || []).map((e) => ({
     type: e.type,
     amount: e.amount || 0,
     refId: e.ref_id,
+    pub: e.ref_id ? (pubByRef.get(e.ref_id) || null) : null,
     at: e.created_at ? new Date(e.created_at).getTime() : null
   }));
   const xp = events.reduce((a, e) => a + e.amount, 0);
   return { xp, events };
+}
+
+/** getXpTotals(): running XP total per profile across the whole active group —
+ *  drives the Social leaderboard. Returns a { profileId: xp } map. Reads the
+ *  xp_totals view (RLS-scoped to your groups). Fails soft to an empty map, so a
+ *  not-yet-pushed migration just shows everyone on 0 XP. */
+export async function fetchXpTotals() {
+  const gid = S.ACTIVE_GROUP.id;
+  const { data, error } = await sb
+    .from('xp_totals')
+    .select('profile_id,xp')
+    .eq('group_id', gid);
+  if (error) { console.warn(error); return {}; }
+  const map = {};
+  (data || []).forEach((r) => { map[r.profile_id] = r.xp || 0; });
+  return map;
 }
 
 // ---------- photos (Phase 6) ----------
