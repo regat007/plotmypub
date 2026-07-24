@@ -11,23 +11,16 @@
 import { registerView } from '../router.mjs';
 import { S, colourFor, escapeHtml } from '../core.mjs';
 import { CATS } from '../config.mjs';
-import { fetchPubs } from '../api.mjs';
+import { fetchPubs, fetchXp } from '../api.mjs';
+import { tierFor } from '../xp.mjs';
 
 const el = document.querySelector('.view-ph[data-view="me"]');
 
 // short axis labels for the radar (CATS labels are too long to ring a small chart)
 const SHORT = { location: 'Location', beer: 'Beer', value: 'Value', facilities: 'Facilities', vibe: 'Vibe' };
 
-// drinker rank, earned by how many pubs you've plotted
-const RANKS = [
-  { at: 0,  title: 'New in town',        icon: '🌱' },
-  { at: 1,  title: 'First Rounds',       icon: '🍺' },
-  { at: 5,  title: 'Regular',            icon: '🍻' },
-  { at: 15, title: 'Seasoned Regular',   icon: '🎖️' },
-  { at: 30, title: "Landlord's Favourite", icon: '🏅' },
-  { at: 50, title: 'Pub Legend',         icon: '👑' }
-];
-function rankFor(n) { let r = RANKS[0]; for (const x of RANKS) if (n >= x.at) r = x; return r; }
+// Your rank is your XP tier now (shared with the Levels tab via xp.mjs) — one
+// progression story, not a second pub-count ladder. See memory: xp-levels-design.
 
 function initialsOf(name) {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
@@ -357,14 +350,14 @@ export function renderMePage(container, ctx) {
   const name = (ctx.profile && ctx.profile.display_name) || 'You';
   const groupName = (ctx.group && ctx.group.name) || '';
   const st = computeStats(ctx.pubs || [], ctx.profile && ctx.profile.id);
-  const rank = rankFor(st.count);
+  const tier = tierFor(ctx.xp || 0);
 
   const hero =
     '<div class="me-hero">' +
       '<div class="me-av">' + initialsOf(name) + '</div>' +
       '<div class="me-id">' +
         '<div class="me-name">' + escapeHtml(name) + '</div>' +
-        '<div class="me-rank">' + rank.icon + ' ' + rank.title +
+        '<div class="me-rank">' + tier.icon + ' ' + tier.title +
           (groupName ? ' <span class="me-dot">·</span> ' + escapeHtml(groupName) : '') + '</div>' +
       '</div>' +
       '<div class="me-hero-num"><b>' + st.count + '</b><span>plotted</span></div>' +
@@ -427,15 +420,20 @@ async function render() {
   if (!box) return;
   if (!box.childElementCount) box.innerHTML = '<div class="me-loading">Plotting your stats…</div>';
 
-  let pubs = [];
-  try { pubs = await fetchPubs(); }
-  catch (e) {
+  let pubs = [], xp = 0;
+  try {
+    const [p, x] = await Promise.all([
+      fetchPubs(),
+      fetchXp().catch(() => ({ xp: 0 }))     // XP is a nicety here; never block the stats on it
+    ]);
+    pubs = p; xp = x.xp;
+  } catch (e) {
     if (token !== loadToken) return;
     box.innerHTML = '<div class="me-loading">Could not load your stats.</div>';
     return;
   }
   if (token !== loadToken) return;
-  renderMePage(box, { profile: S.PROFILE, group: S.ACTIVE_GROUP, pubs });
+  renderMePage(box, { profile: S.PROFILE, group: S.ACTIVE_GROUP, pubs, xp });
 }
 
 registerView('me', { el, onShow: render });
