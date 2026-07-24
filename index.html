@@ -137,12 +137,16 @@
       </div>
 
       <div id="panelTabs" role="tablist">
-        <button class="ptab active" type="button" data-page="0" role="tab" aria-selected="true">Leaderboard</button>
-        <button class="ptab" type="button" data-page="1" role="tab" aria-selected="false">Activity</button>
+        <button class="ptab active" type="button" data-page="0" role="tab" aria-selected="true">Activity</button>
+        <button class="ptab" type="button" data-page="1" role="tab" aria-selected="false">Leaderboard</button>
       </div>
 
       <div id="panelPages">
         <div id="panelTrack">
+          <section class="panel-page" id="pageActivity" role="tabpanel">
+            <div id="activityList"></div>
+          </section>
+
           <section class="panel-page" id="pageBoard" role="tabpanel">
             <div class="scale">
               <span style="background:#f8696b"></span><span style="background:#fbb46e"></span>
@@ -167,10 +171,6 @@
               </div>
               <table><tbody id="boardBody"></tbody></table>
             </div>
-          </section>
-
-          <section class="panel-page" id="pageActivity" role="tabpanel">
-            <div id="activityList"></div>
           </section>
         </div>
       </div>

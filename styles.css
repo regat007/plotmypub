@@ -393,18 +393,36 @@
     #board .dot i { display: block; width: 10px; height: 10px; border-radius: 50%; }
     #board .none { color: var(--muted); font-style: italic; padding: 8px 0; }
 
-    /* recent activity list */
+    /* recent activity feed — the primary Feed view */
     #activityList { padding: 2px 0; }
     .act {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 2px; border-bottom: 1px solid #f2f2f0; cursor: pointer;
+      display: flex; align-items: flex-start; gap: 11px;
+      padding: 12px 2px; border-bottom: 1px solid #f2f2f0; cursor: pointer;
+      transition: opacity .15s ease, background .15s ease;
     }
-    .act:hover { background: var(--bg); }
-    .act i { flex: 0 0 10px; width: 10px; height: 10px; border-radius: 50%; }
+    .act:hover { background: var(--bg); opacity: 1 !important; }   /* aged rows lift back to full on hover */
+    .act-badge {
+      flex: 0 0 auto; min-width: 38px; height: 38px; padding: 0 6px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 9px; color: #1c2b2b; font-weight: bold; font-size: 15px;
+      font-variant-numeric: tabular-nums; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+    }
     .act .body { flex: 1; min-width: 0; }
+    .act .top { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
     .act .pub { font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .act .meta { color: var(--muted); font-size: 11px; }
-    .act .sc { font-weight: bold; font-variant-numeric: tabular-nums; }
+    .act .area {
+      flex: 0 1 auto; color: var(--muted); font-size: 12px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .act .meta { color: var(--muted); font-size: 11px; margin-top: 1px; }
+    .act .cats { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 7px; }
+    .act .chip {
+      display: inline-flex; align-items: baseline; gap: 4px;
+      padding: 2px 7px; border-radius: 6px; background: var(--bg);
+      font-size: 11px; line-height: 1.4;
+    }
+    .act .chip em { color: var(--muted); font-style: normal; }
+    .act .chip b { font-variant-numeric: tabular-nums; }
     .act .none { color: var(--muted); font-style: italic; padding: 12px 2px; }
 
     /* mobile */

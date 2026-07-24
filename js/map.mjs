@@ -541,6 +541,32 @@ function relTime(ms) {
   return new Date(ms).toLocaleDateString();
 }
 
+// Short chip labels for the per-rating category breakdown shown in the feed.
+var CAT_SHORT = {
+  location: 'Location', beer: 'Beer', value: 'Value', facilities: 'Facilities', vibe: 'Vibe'
+};
+
+// Older ratings fade toward a still-readable floor, so the freshest activity
+// reads as "now" and the tail visibly recedes. Full strength under a day old,
+// easing to the floor by ~2 weeks.
+function ageOpacity(ms) {
+  if (!ms) return 1;
+  var days = (Date.now() - ms) / 86400000;
+  var floor = 0.35;
+  return 1 - Math.min(1, days / 14) * (1 - floor);
+}
+
+function catChips(cats) {
+  if (!cats) return '';
+  var out = CATS.map(function (c) {
+    var v = cats[c.key];
+    if (v == null) return '';
+    return '<span class="chip"><em>' + CAT_SHORT[c.key] + '</em>' +
+      '<b style="color:' + colourForKey(v, c.key) + '">' + v.toFixed(1) + '</b></span>';
+  }).filter(Boolean).join('');
+  return out ? '<div class="cats">' + out + '</div>' : '';
+}
+
 function renderActivity(items) {
   var box = $('activityList');
   box.innerHTML = '';
@@ -551,15 +577,20 @@ function renderActivity(items) {
   items.forEach(function (a) {
     var row = document.createElement('div');
     row.className = 'act';
+    row.style.opacity = ageOpacity(a.ratedAt);
+    var col = colourFor(a.score);
     row.innerHTML =
-      '<i style="background:' + colourFor(a.score) + '"></i>' +
+      '<span class="act-badge" style="background:' + col + '">' +
+        (a.score == null ? '—' : a.score.toFixed(1)) + '</span>' +
       '<div class="body">' +
-        '<div class="pub">' + escapeHtml(a.pub) + '</div>' +
+        '<div class="top">' +
+          '<span class="pub">' + escapeHtml(a.pub) + '</span>' +
+          (a.area ? '<span class="area">' + escapeHtml(a.area) + '</span>' : '') +
+        '</div>' +
         '<div class="meta">' + escapeHtml(a.author) +
           (a.ratedAt ? ' · ' + relTime(a.ratedAt) : '') + '</div>' +
-      '</div>' +
-      '<span class="sc" style="color:' + colourFor(a.score) + '">' +
-        (a.score == null ? '—' : a.score.toFixed(1)) + '</span>';
+        catChips(a.cats) +
+      '</div>';
     row.addEventListener('click', function () { focusPub(a); });
     box.appendChild(row);
   });
@@ -570,7 +601,7 @@ function loadActivity() {
 }
 
 // ---------- panel: leaderboard / activity tabs + swipe ----------
-var PANEL_PAGE = 0;                 // 0 = leaderboard, 1 = activity
+var PANEL_PAGE = 0;                 // 0 = activity (primary), 1 = leaderboard
 function setPanelPage(i) {
   PANEL_PAGE = i;
   $('panelTrack').style.transform = 'translateX(' + (-i * 100) + '%)';
@@ -579,7 +610,7 @@ function setPanelPage(i) {
     b.classList.toggle('active', on);
     b.setAttribute('aria-selected', on ? 'true' : 'false');
   });
-  if (i === 1) loadActivity();     // freshen the feed when it comes into view
+  if (i === 0) loadActivity();     // freshen the feed when it comes into view
 }
 document.querySelectorAll('#panelTabs .ptab').forEach(function (b) {
   b.addEventListener('click', function () { setPanelPage(Number(b.dataset.page)); });
