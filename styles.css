@@ -484,6 +484,9 @@
       #locateBtn {
         bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px); left: 16px;
       }
+      /* Add-a-pub moves to the bottom on mobile, so the badge rises to the top,
+         mirroring the avatar (#userBar, top:12 left:12) on the right. */
+      #mapXp { top: 12px; right: 12px; }
 
       #form {
         top: 0; left: 0; right: 0; bottom: 0; width: auto;
