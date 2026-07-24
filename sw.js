@@ -14,7 +14,7 @@
  * CACHE_VERSION is only needed to purge the old cache, not to avoid staleness.
  */
 
-const CACHE_VERSION = 'plotmypub-v11';
+const CACHE_VERSION = 'plotmypub-v12';
 
 const SHELL = [
   '/',
@@ -27,6 +27,7 @@ const SHELL = [
   '/js/auth.mjs',
   '/js/map.mjs',
   '/js/router.mjs',
+  '/js/achievements.mjs',
   '/js/views/feed.mjs',
   '/js/views/social.mjs',
   '/js/views/me.mjs',
