@@ -41,6 +41,7 @@ export function showView(name) {
   if (name === current) return;
 
   const from = current;
+  if (from && views[from] && views[from].onHide) views[from].onHide();
   const movingRight = (order[name] || 0) > (order[from] || 0);
   const enterSide = movingRight ? 'slide-right' : 'slide-left';
   const exitSide  = movingRight ? 'slide-left'  : 'slide-right';

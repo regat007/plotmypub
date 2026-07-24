@@ -4,15 +4,16 @@
 
 import { sb, $ } from './core.mjs';
 import { route } from './auth.mjs';
-import { registerView, initNav } from './router.mjs';
-// View modules self-register (and mount their placeholder) on import.
+import { initNav } from './router.mjs';
+// View modules self-register (and mount their placeholder) on import. The map
+// registers itself in map.mjs (pulled in via auth) so it can carry the
+// show/hide hooks that drive its live-location watch.
 import './views/feed.mjs';
 import './views/social.mjs';
 import './views/me.mjs';
 import './views/levels.mjs';
 
 // ---------- nav ----------
-registerView('map', {});   // the base layer; no overlay of its own
 initNav();
 
 // ---------- boot ----------

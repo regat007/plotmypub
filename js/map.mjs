@@ -13,7 +13,7 @@ import {
   signedPhoto, uploadPhoto, setRatingPhotoPath, photoPath
 } from './api.mjs';
 import { loadGroups } from './auth.mjs';
-import { showView } from './router.mjs';
+import { showView, registerView } from './router.mjs';
 
 // ===========================================================
 //  MAP APP
@@ -436,6 +436,7 @@ function updateLive() {
 function toggleForm(open) {
   $('form').style.display = open ? 'flex' : 'none';
   $('fabs').style.display = open ? 'none' : 'flex';
+  $('locateBtn').style.display = open ? 'none' : 'flex';
   $('userBar').style.display = open ? 'none' : 'block';
   if (open) {
     $('f_authorName').textContent = S.PROFILE ? S.PROFILE.display_name : '—';
@@ -758,6 +759,103 @@ $('mapCreate').addEventListener('click', async function () {
   syncMapGroupBar();
   closeUserMenu();
   renderPubs();
+});
+
+// ---------- my location: live dot + centre-on-me ----------
+// Browser Geolocation (navigator.geolocation) is a free native API — no Maps
+// quota cost, and panning/updating the dot are client-side ops on an already
+// loaded map, so this adds nothing to billing. watchPosition streams fixes as
+// the user moves; we mirror the latest onto a pulsing blue-dot AdvancedMarker.
+// The watch is stopped whenever the map view is hidden (router onHide) so it
+// never drains battery from behind another tab, and resumed on return if the
+// user still has it switched on.
+var LOCATE_ON = false;      // user has enabled "show my location"
+var WATCH_ID = null;        // active geolocation watch id, or null
+var MY_MARKER = null;       // the blue dot (AdvancedMarker), made on first fix
+var MY_POS = null;          // last known { lat, lng }
+var CENTRE_PENDING = false; // pan/zoom to the next fix (button was just pressed)
+
+function myDotEl() {
+  var el = document.createElement('div');
+  el.className = 'me-dot';
+  el.innerHTML = '<span class="me-dot-pulse"></span><span class="me-dot-core"></span>';
+  return el;
+}
+
+function setLocateState(state) {   // 'on' | 'off' | 'denied'
+  var btn = $('locateBtn');
+  if (!btn) return;
+  btn.classList.toggle('active', state === 'on');
+  btn.classList.toggle('denied', state === 'denied');
+  btn.setAttribute('aria-pressed', state === 'on' ? 'true' : 'false');
+}
+
+function recentre() {
+  if (!MY_POS) return;
+  MAP.panTo(MY_POS);
+  if (MAP.getZoom() < 15) MAP.setZoom(16);
+}
+
+function onLocatePos(pos) {
+  MY_POS = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+  if (!MY_MARKER) {
+    MY_MARKER = new AdvancedMarker({
+      map: MAP, position: MY_POS, content: myDotEl(),
+      title: 'You are here', zIndex: 9999
+    });
+  } else {
+    MY_MARKER.position = MY_POS;
+  }
+  if (CENTRE_PENDING) { CENTRE_PENDING = false; recentre(); }
+  setLocateState('on');
+}
+
+function onLocateError(err) {
+  CENTRE_PENDING = false;
+  if (err && err.code === 1) {          // PERMISSION_DENIED
+    LOCATE_ON = false;
+    stopWatch();
+    setLocateState('denied');
+    showError('Location is off. Turn it on in your browser to see where you are.');
+  } else {
+    // POSITION_UNAVAILABLE / TIMEOUT — keep watching; the next fix may arrive.
+    setLocateState(LOCATE_ON ? 'on' : 'off');
+  }
+}
+
+function startWatch() {
+  if (WATCH_ID != null || !navigator.geolocation) return;
+  WATCH_ID = navigator.geolocation.watchPosition(onLocatePos, onLocateError, {
+    enableHighAccuracy: true, maximumAge: 10000, timeout: 12000
+  });
+}
+
+function stopWatch() {
+  if (WATCH_ID != null) { navigator.geolocation.clearWatch(WATCH_ID); WATCH_ID = null; }
+}
+
+// First press switches locating on and recentres on the first fix (the
+// permission prompt fires here, on this user gesture); later presses just
+// recentre on the current position.
+$('locateBtn').addEventListener('click', function () {
+  if (!navigator.geolocation) { showError('This browser has no location support.'); return; }
+  if (!LOCATE_ON) {
+    LOCATE_ON = true;
+    CENTRE_PENDING = true;
+    setLocateState('on');
+    startWatch();
+  } else if (MY_POS) {
+    recentre();
+  } else {
+    CENTRE_PENDING = true;   // on, but no fix yet → centre when it lands
+  }
+});
+
+// Register the map as the base-layer view. onHide pauses the live watch while
+// another tab is on top; onShow resumes it if the user left locating switched on.
+registerView('map', {
+  onShow: function () { if (LOCATE_ON) startWatch(); },
+  onHide: function () { stopWatch(); }
 });
 
 // ---------- Maps JS loader (one-time) ----------
