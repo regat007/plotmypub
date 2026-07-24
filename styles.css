@@ -674,3 +674,133 @@
       text-align: center; font-size: 11.5px; color: var(--muted);
       margin: 16px 4px 4px; line-height: 1.5;
     }
+
+    /* ---------- Me tab (your personal stats + plots) ---------- */
+    .view-ph.me-view {
+      align-items: stretch; justify-content: flex-start; text-align: left;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: calc(env(safe-area-inset-top) + 20px) 16px 0;
+      background: radial-gradient(120% 60% at 50% 0%, #ffffff, var(--bg));
+    }
+    .me-page {
+      width: 100%; max-width: 480px; margin: 0 auto;
+      padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 24px);
+    }
+    .me-loading { color: var(--muted); font-size: 13px; text-align: center; padding: 40px 0; }
+
+    /* section labels — shared look with the Social tab */
+    .me-view .sec-label {
+      font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
+      color: var(--muted); font-weight: bold; margin: 22px 4px 9px;
+    }
+
+    /* hero: avatar + name + rank + headline count */
+    .me-hero {
+      display: flex; align-items: center; gap: 13px;
+      background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+      padding: 15px; box-shadow: 0 1px 2px rgba(20,33,61,.04);
+    }
+    .me-av {
+      flex: 0 0 auto; width: 54px; height: 54px; border-radius: 16px;
+      background: linear-gradient(160deg, var(--slate), var(--slate-d));
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: bold; letter-spacing: .02em;
+      font-variant-numeric: tabular-nums; box-shadow: 0 3px 10px rgba(47,79,79,.35);
+    }
+    .me-id { flex: 1; min-width: 0; }
+    .me-name { font-size: 19px; font-weight: bold; letter-spacing: .01em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .me-rank { font-size: 12.5px; color: var(--muted); margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .me-rank .me-dot { color: #c9ccc9; }
+    .me-hero-num { flex: 0 0 auto; text-align: center; padding-left: 6px; }
+    .me-hero-num b { display: block; font-size: 26px; line-height: 1;
+      font-variant-numeric: tabular-nums; color: var(--slate); }
+    .me-hero-num span { display: block; font-size: 9.5px; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--muted); margin-top: 3px; }
+
+    /* stat tiles (reuse the Feed tile look) */
+    .me-tiles { display: flex; gap: 8px; margin-top: 12px; }
+    .me-tiles .stat-tile { flex: 1; background: var(--card); border: 1px solid var(--line);
+      border-radius: 12px; padding: 10px 6px; text-align: center; }
+    .me-tiles .stat-tile b { display: block; font-size: 20px; font-variant-numeric: tabular-nums;
+      line-height: 1.1; color: var(--ink); }
+    .me-tiles .stat-tile span { display: block; font-size: 9.5px; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--muted); margin-top: 4px; }
+
+    /* chart cards */
+    .me-card {
+      background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+      box-shadow: 0 1px 2px rgba(20,33,61,.04); overflow: hidden;
+    }
+    .me-card-pad { padding: 14px 12px 12px; }
+    .me-card .chart { display: block; width: 100%; height: auto; }
+    /* violins, one per category — a smooth swipeable carousel (no scrollbar).
+       Snap centres each violin; overscroll-x containment keeps a horizontal
+       swipe from firing the browser's back gesture. */
+    .me-violins {
+      display: flex; gap: 8px;
+      overflow-x: auto; overflow-y: hidden;
+      scroll-snap-type: x mandatory; scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+      scrollbar-width: none; padding: 2px 0;
+    }
+    .me-violins::-webkit-scrollbar { display: none; }
+    .me-violin { flex: 0 0 auto; width: 100px; scroll-snap-align: center; text-align: center; }
+    .me-violin .vln { display: block; width: 100px; height: auto; }
+    .mv-lab { font-size: 11px; color: var(--muted); margin-top: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mv-lab b { color: var(--ink); font-weight: 700; }
+
+    /* superlatives grid */
+    .me-supers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .me-super {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+      padding: 11px 11px; min-width: 0;
+    }
+    .me-super-ic {
+      flex: 0 0 auto; width: 34px; height: 34px; border-radius: 10px; background: var(--bg);
+      display: flex; align-items: center; justify-content: center; font-size: 17px;
+    }
+    .me-super-body { flex: 1; min-width: 0; }
+    .me-super-lab { font-size: 9.5px; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--muted); font-weight: bold; }
+    .me-super-name { font-size: 13.5px; font-weight: bold; color: var(--ink); margin-top: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .me-super-sub { font-size: 11px; color: var(--muted); margin-top: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .me-chip {
+      flex: 0 0 auto; display: inline-block; min-width: 30px; padding: 2px 6px; border-radius: 7px;
+      font-size: 13px; font-weight: bold; color: var(--ink); text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .me-chip-none { background: var(--bg); color: var(--muted); }
+
+    /* generous-vs-group diverging meter */
+    .me-tend {
+      margin-top: 10px; background: var(--card); border: 1px solid var(--line);
+      border-radius: 14px; padding: 13px 14px;
+    }
+    .me-tend-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .me-tend-verdict { font-size: 14.5px; font-weight: bold; color: var(--ink); }
+    .me-tend-num { font-size: 15px; font-weight: bold; color: var(--slate);
+      font-variant-numeric: tabular-nums; }
+    .me-tend-num span { font-size: 10px; font-weight: normal; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .04em; }
+    .me-tend-track { position: relative; height: 8px; border-radius: 5px;
+      background: linear-gradient(90deg, rgba(248,105,107,.18), var(--bg) 50%, rgba(99,190,123,.18));
+      margin: 11px 0 9px; }
+    .me-tend-mid { position: absolute; left: 50%; top: -2px; width: 2px; height: 12px;
+      background: #c9ccc9; transform: translateX(-50%); }
+    .me-tend-fill { position: absolute; top: 0; height: 8px; border-radius: 5px; min-width: 3px; }
+    .me-tend-blurb { font-size: 12px; color: var(--muted); line-height: 1.45; }
+
+    /* empty state */
+    .me-empty { text-align: center; padding: 40px 20px 24px; }
+    .me-empty-emoji { font-size: 40px; margin-bottom: 12px; }
+    .me-empty-title { font-size: 16px; font-weight: bold; color: var(--ink); margin-bottom: 8px; }
+    .me-empty p { font-size: 13px; color: var(--muted); line-height: 1.55; max-width: 300px; margin: 0 auto; }
+
+    .me-foot { text-align: center; font-size: 11.5px; color: var(--muted);
+      margin: 18px 4px 4px; }
