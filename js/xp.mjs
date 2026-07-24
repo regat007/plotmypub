@@ -25,15 +25,15 @@ export const XP_LABELS = {
 
 // The six tiers, keyed on cumulative XP. Hand-tuned thresholds (deliberately NOT
 // a formula — even, round steps read as generic): steepening gaps that keep the
-// top open for achievements. Names + emoji match the old pub-count ranks in
-// me.mjs, now driven by XP instead of a raw count.
+// top open for achievements. Titles are the app's rank names, shown on the
+// Levels tab and the Me hero (both read this array — rename here only).
 export const TIERS = [
-  { at: 0,     title: 'New in town',          icon: '🌱' },
-  { at: 50,    title: 'First Rounds',         icon: '🍺' },
-  { at: 500,   title: 'Regular',              icon: '🍻' },
-  { at: 2500,  title: 'Seasoned Regular',     icon: '🎖️' },
-  { at: 7500,  title: "Landlord's Favourite", icon: '🏅' },
-  { at: 18000, title: 'Pub Legend',           icon: '👑' }
+  { at: 0,     title: 'Brand New',                icon: '🌱' },
+  { at: 50,    title: 'I Remember My First Beer', icon: '🍺' },
+  { at: 500,   title: 'Regular',                  icon: '🍻' },
+  { at: 2500,  title: 'Seasoned Regular',         icon: '🎖️' },
+  { at: 7500,  title: "Landlord's Favourite",     icon: '🏅' },
+  { at: 18000, title: 'Publican',                 icon: '👑' }
 ];
 
 /** Index of the tier a given XP total sits in. */

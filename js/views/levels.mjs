@@ -54,12 +54,13 @@ function heroHtml(xp, pubs) {
     ? 'Maxed — <b>' + fmt(xp) + '</b> XP, ' + fmt(p.done) + ' past Pub Legend'
     : '<b>' + fmt(xp) + '</b> XP · ' + fmt(p.remaining) + ' to ' + escapeHtml(nxt.title);
   return '' +
-    '<div class="lv-hero">' +
+    '<div class="lv-hero" id="lvHero" role="button" tabindex="0" aria-expanded="false" aria-controls="lvTiers">' +
       '<div class="lv-crest">' + cur.icon + '</div>' +
       '<div class="lv-id">' +
         '<div class="lv-tier">' + escapeHtml(cur.title) + '</div>' +
-        '<div class="lv-sub">' + pubs + (pubs === 1 ? ' pub' : ' pubs') + ' mapped in this group</div>' +
+        '<div class="lv-sub">' + pubs + (pubs === 1 ? ' pub' : ' pubs') + ' mapped · tap for all tiers</div>' +
       '</div>' +
+      '<span class="lv-chev" aria-hidden="true">›</span>' +
     '</div>' +
     '<div class="lv-prog">' +
       '<div class="lv-prog-head">' +
@@ -134,11 +135,27 @@ async function render() {
   const rows = groupEvents(events);
   page.innerHTML =
     heroHtml(xp, pubs) +
-    '<div class="sec-label">Tiers</div>' +
-    '<div class="lv-ladder">' + ladderHtml(xp) + '</div>' +
+    '<div class="lv-tiers" id="lvTiers" hidden>' +
+      '<div class="sec-label">Tiers</div>' +
+      '<div class="lv-ladder">' + ladderHtml(xp) + '</div>' +
+    '</div>' +
     (rows.length
       ? '<div class="sec-label">Recent XP</div><div class="lv-feed">' + feedHtml(rows) + '</div>'
       : '');
 }
+
+// The tier ladder is tucked away by default; tapping your level reveals it.
+function toggleTiers() {
+  const hero = document.getElementById('lvHero');
+  const tiers = document.getElementById('lvTiers');
+  if (!hero || !tiers) return;
+  const open = !tiers.hasAttribute('hidden');
+  if (open) { tiers.setAttribute('hidden', ''); hero.setAttribute('aria-expanded', 'false'); hero.classList.remove('open'); }
+  else { tiers.removeAttribute('hidden'); hero.setAttribute('aria-expanded', 'true'); hero.classList.add('open'); }
+}
+el.addEventListener('click', (e) => { if (e.target.closest('#lvHero')) toggleTiers(); });
+el.addEventListener('keydown', (e) => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('#lvHero')) { e.preventDefault(); toggleTiers(); }
+});
 
 registerView('levels', { el, onShow: render });
