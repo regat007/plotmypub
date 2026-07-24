@@ -547,14 +547,15 @@ var CAT_SHORT = {
   location: 'Location', beer: 'Beer', value: 'Value', facilities: 'Facilities', vibe: 'Vibe'
 };
 
-// Older ratings fade toward a still-readable floor, so the freshest activity
-// reads as "now" and the tail visibly recedes. Full strength under a day old,
-// easing to the floor by ~2 weeks.
+// Older ratings fade so the freshest activity reads as "now" and the tail
+// recedes hard. Full strength under a day old, then an ease-in curve that keeps
+// recent items crisp before dropping off — nearly invisible by ~4 weeks.
 function ageOpacity(ms) {
   if (!ms) return 1;
   var days = (Date.now() - ms) / 86400000;
-  var floor = 0.35;
-  return 1 - Math.min(1, days / 14) * (1 - floor);
+  var floor = 0.06;
+  var t = Math.min(1, days / 28);   // 0 = now, 1 = four weeks old
+  return 1 - (t * t) * (1 - floor); // ease-in: gentle early, steep at the tail
 }
 
 function catChips(cats) {
