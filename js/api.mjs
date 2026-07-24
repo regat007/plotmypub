@@ -17,7 +17,7 @@ export async function fetchPubs() {
   const [scoresRes, ratingsRes] = await Promise.all([
     sb.from('pub_scores').select('*').eq('group_id', gid),
     sb.from('ratings')
-      .select('location,beer,value,facilities,vibe,note,photo_path,profile_id,pubs!inner(id,name,area,lat,lng,place_id,group_id),profiles!inner(display_name)')
+      .select('location,beer,value,facilities,vibe,note,photo_path,profile_id,created_at,pubs!inner(id,name,area,lat,lng,place_id,group_id),profiles!inner(display_name)')
       .eq('group_id', gid)
   ]);
   if (scoresRes.error) throw scoresRes.error;
@@ -60,6 +60,7 @@ export async function fetchPubs() {
     g.ratings.push({
       author: r.profiles ? r.profiles.display_name : '—',
       profileId: r.profile_id,
+      ratedAt: r.created_at ? new Date(r.created_at).getTime() : null,
       score: catScore, cats,
       note: (r.note || '').trim() || null,
       photoPath: r.photo_path || null
@@ -69,6 +70,20 @@ export async function fetchPubs() {
   return Object.keys(byId)
     .map((k) => byId[k])
     .filter((p) => p.pub && p.lat != null && p.lng != null);
+}
+
+/** getMembers(): the active group's full roster as { id, name }, including
+ *  members who haven't rated a pub yet. Used by the Social tab. */
+export async function fetchMembers() {
+  const gid = S.ACTIVE_GROUP.id;
+  const { data, error } = await sb
+    .from('group_members')
+    .select('profile_id,profiles!inner(display_name)')
+    .eq('group_id', gid);
+  if (error) { console.warn(error); return []; }
+  return (data || [])
+    .map((m) => ({ id: m.profile_id, name: m.profiles && m.profiles.display_name }))
+    .filter((m) => m.name);
 }
 
 /** getUsers(): display names of the active group's members, for autocomplete. */
