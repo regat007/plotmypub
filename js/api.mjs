@@ -180,6 +180,29 @@ export async function fetchActivity(limit) {
   });
 }
 
+/** getXp(): the signed-in profile's XP ledger for the active group — newest
+ *  first — plus the running total. Feeds the Levels tab. Several rows can share
+ *  a ref_id (base + bonuses for one rating); the view groups them. */
+export async function fetchXp() {
+  const gid = S.ACTIVE_GROUP.id;
+  const pid = S.PROFILE.id;
+  const { data, error } = await sb
+    .from('xp_events')
+    .select('type,amount,ref_id,created_at')
+    .eq('group_id', gid)
+    .eq('profile_id', pid)
+    .order('created_at', { ascending: false });
+  if (error) { console.warn(error); return { xp: 0, events: [] }; }
+  const events = (data || []).map((e) => ({
+    type: e.type,
+    amount: e.amount || 0,
+    refId: e.ref_id,
+    at: e.created_at ? new Date(e.created_at).getTime() : null
+  }));
+  const xp = events.reduce((a, e) => a + e.amount, 0);
+  return { xp, events };
+}
+
 // ---------- photos (Phase 6) ----------
 var PHOTO_BUCKET = 'pub-photos';
 
