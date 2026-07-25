@@ -362,8 +362,22 @@ function closePicker() {
   const m = document.getElementById('mePickModal');
   if (m) m.remove();
 }
-async function savePins() {
-  try { PINS = await setPinned(PINS); } catch (e) { console.warn(e); }
+// Persist a proposed pin list. PINS is only committed if the write actually
+// lands — a swallowed error is exactly what let a missing DB column masquerade
+// as a working pin (it stuck in-session, vanished on reload). On failure PINS
+// is left untouched, so refreshPins() naturally reverts the optimistic change.
+async function savePins(next) {
+  try { PINS = await setPinned(next); return true; }
+  catch (e) { console.warn(e); return false; }
+}
+function pinError() {
+  const w = document.getElementById('mePinsWrap');
+  if (!w || w.querySelector('.me-pin-err')) return;
+  const n = document.createElement('div');
+  n.className = 'me-pin-err';
+  n.textContent = 'Couldn’t save your pinned badges — please try again.';
+  w.appendChild(n);
+  setTimeout(() => n.remove(), 4000);
 }
 
 el.addEventListener('click', async (e) => {
@@ -372,15 +386,19 @@ el.addEventListener('click', async (e) => {
   const pick = e.target.closest('[data-pick]');
   if (pick) {
     const code = pick.getAttribute('data-pick');
-    if (PINS.indexOf(code) === -1 && PINS.length < 3) { PINS.push(code); await savePins(); refreshPins(); }
     closePicker();
+    if (PINS.indexOf(code) === -1 && PINS.length < 3) {
+      const ok = await savePins(PINS.concat(code));
+      refreshPins();
+      if (!ok) pinError();
+    }
     return;
   }
   const rem = e.target.closest('[data-remove]');
   if (rem) {
-    PINS = PINS.filter((c) => c !== rem.getAttribute('data-remove'));
-    await savePins();
+    const ok = await savePins(PINS.filter((c) => c !== rem.getAttribute('data-remove')));
     refreshPins();
+    if (!ok) pinError();
   }
 });
 

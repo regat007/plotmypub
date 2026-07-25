@@ -798,6 +798,7 @@
       border: 1px solid var(--line); background: var(--card); color: var(--muted); font-size: 14px; line-height: 1;
       cursor: pointer; display: grid; place-items: center; padding: 0; }
     .me-view .me-pin-x:hover { color: var(--bad); border-color: var(--bad); }
+    .me-view .me-pin-err { margin-top: 8px; font-size: 12px; font-weight: bold; color: var(--bad); text-align: center; }
 
     /* ---- pin picker (bottom-sheet modal) ---- */
     .me-pick-modal { position: fixed; inset: 0; z-index: 50; background: rgba(20,33,61,.35);
