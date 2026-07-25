@@ -160,6 +160,12 @@ async function onPin() {
 }
 
 function dismiss() {
-  if (overlay) overlay.classList.remove('open');
-  setTimeout(next, 200);            // let it fade before the next one (or settle empty)
+  if (overlay) {
+    overlay.classList.add('closing');   // keeps it visible while the exit anim plays
+    overlay.classList.remove('open');
+  }
+  setTimeout(() => {                 // let it fade before the next one (or settle empty)
+    if (overlay) overlay.classList.remove('closing');
+    next();
+  }, 200);
 }

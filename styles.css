@@ -1238,7 +1238,11 @@
        dark card + gold buttons. ============================================ */
     .unlock-ov { position: fixed; inset: 0; z-index: 200; display: none;
       align-items: center; justify-content: center; padding: 24px; }
-    .unlock-ov.open { display: flex; }
+    .unlock-ov.open, .unlock-ov.closing { display: flex; }
+    /* exit: mirror the spring-in with a quick fade+settle so the popup doesn't
+       blink out. Budget matches the 200ms wait in dismiss() (js/unlock.mjs). */
+    .unlock-ov.closing .unlock-bg { animation: unlock-fade-out .18s ease forwards; }
+    .unlock-ov.closing .unlock-pop { animation: unlock-pop-out .18s cubic-bezier(.4,0,.2,1) forwards; }
     .unlock-bg { position: absolute; inset: 0; background: rgba(15,20,25,.55);
       -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); animation: unlock-fade .25s ease; }
     .unlock-pop { position: relative; z-index: 1; width: 100%; max-width: 320px; background: var(--card);
@@ -1280,11 +1284,14 @@
     @keyframes unlock-fade { from { opacity: 0; } to { opacity: 1; } }
     @keyframes unlock-pop { from { opacity: 0; transform: translateY(14px) scale(.92); } to { opacity: 1; transform: none; } }
     @keyframes unlock-medal { from { opacity: 0; transform: scale(.4) rotate(-12deg); } to { opacity: 1; transform: none; } }
+    @keyframes unlock-fade-out { from { opacity: 1; } to { opacity: 0; } }
+    @keyframes unlock-pop-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px) scale(.96); } }
 
     @media (prefers-reduced-motion: reduce) {
       .ach-rays,
       .ach-medal.legendary .ach-ring::after { animation: none; }
       .ach-medal.epic .ach-disc::after,
       .ach-medal.legendary .ach-disc::after { display: none; }
-      .unlock-bg, .unlock-pop, .unlock-medal .ach-medal { animation: none; }
+      .unlock-bg, .unlock-pop, .unlock-medal .ach-medal,
+      .unlock-ov.closing .unlock-bg, .unlock-ov.closing .unlock-pop { animation: none; }
     }
