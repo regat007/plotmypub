@@ -10,7 +10,7 @@ import { registerView } from '../router.mjs';
 import { S, escapeHtml } from '../core.mjs';
 import { TIERS, tierIndexFor, progress, XP_LABELS } from '../xp.mjs';
 import { ACHIEVEMENTS, RARITY, RARITY_ORDER, isHidden, TOTAL } from '../achievements.mjs';
-import { fetchXp, fetchAchievements } from '../api.mjs';
+import { fetchXp, fetchAchievements, fetchTitleHolders } from '../api.mjs';
 
 const el = document.querySelector('.view-ph[data-view="levels"]');
 
@@ -30,7 +30,16 @@ function achMedal(a, shown) {
   '</div>';
 }
 
-function achCard(a, earned) {
+// The live "who holds it now" line for a Title badge (the ledger only records
+// the one-time XP; the current holder is computed on read — see fetchTitleHolders).
+function titleTag(a, holders) {
+  const h = holders && holders[a.code];
+  if (h && h.profileId === S.PROFILE.id) return '<div class="ach-tag ach-tag-you">You hold this</div>';
+  if (h && h.name) return '<div class="ach-tag">Held by ' + escapeHtml(h.name) + '</div>';
+  return '<div class="ach-tag">Up for grabs</div>';
+}
+
+function achCard(a, earned, holders) {
   const shown = !!earned[a.code];
   const locked = !shown;
   const hidden = locked && isHidden(a.rarity);
@@ -43,18 +52,18 @@ function achCard(a, earned) {
     '<div class="ach-meta"><span class="ach-chip ' + a.rarity + '">' + r.label + '</span>' +
       '<span class="ach-xp">+' + r.xp + '</span></div>' +
     '<div class="ach-obj">' + escapeHtml(obj) + '</div>' +
-    (a.title ? '<div class="ach-tag">Title · held by one</div>' : '') +
+    (a.title ? titleTag(a, holders) : '') +
   '</div>';
 }
 
-function achievementsHtml(earned) {
+function achievementsHtml(earned, holders) {
   const got = ACHIEVEMENTS.filter((a) => earned[a.code]).length;
   const sections = RARITY_ORDER.map((k) => {
     const items = ACHIEVEMENTS.filter((a) => a.rarity === k);
     if (!items.length) return '';
     return '<div class="ach-rar-label ' + k + '">' + RARITY[k].label +
       ' · +' + RARITY[k].xp + ' XP</div>' +
-      '<div class="ach-grid">' + items.map((a) => achCard(a, earned)).join('') + '</div>';
+      '<div class="ach-grid">' + items.map((a) => achCard(a, earned, holders)).join('') + '</div>';
   }).join('');
   return '<div class="ach-head"><div class="sec-label">Achievements</div>' +
     '<div class="ach-count">' + got + ' / ' + TOTAL + '</div></div>' +
@@ -163,10 +172,13 @@ async function render() {
 
   let data;
   let earned = {};
+  let holders = {};
   try {
-    // achievements fail soft to {} on their own, so only fetchXp can reject here
-    const [xpData, ach] = await Promise.all([fetchXp(), fetchAchievements()]);
-    data = xpData; earned = ach || {};
+    // achievements + holders fail soft to {} on their own, so only fetchXp rejects here
+    const [xpData, ach, hold] = await Promise.all([
+      fetchXp(), fetchAchievements(), fetchTitleHolders().catch(() => ({}))
+    ]);
+    data = xpData; earned = ach || {}; holders = hold || {};
   }
   catch (e) {
     if (token !== loadToken) return;
@@ -185,7 +197,7 @@ async function render() {
         '<div class="lv-empty-title">' + escapeHtml(TIERS[0].title) + '</div>' +
         '<div class="lv-empty-sub">Rate your first pub to start earning XP and begin the climb toward ' +
           escapeHtml(TIERS[TIERS.length - 1].title) + '.</div>' +
-      '</div>' + achievementsHtml(earned);
+      '</div>' + achievementsHtml(earned, holders);
     return;
   }
 
@@ -199,7 +211,7 @@ async function render() {
     (rows.length
       ? '<div class="sec-label">Recent XP</div><div class="lv-feed">' + feedHtml(rows) + '</div>'
       : '') +
-    achievementsHtml(earned);
+    achievementsHtml(earned, holders);
 }
 
 // The tier ladder is tucked away by default; tapping your level reveals it.

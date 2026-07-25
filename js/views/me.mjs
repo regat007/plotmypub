@@ -11,8 +11,9 @@
 import { registerView } from '../router.mjs';
 import { S, colourFor, escapeHtml } from '../core.mjs';
 import { CATS } from '../config.mjs';
-import { fetchPubs, fetchXp } from '../api.mjs';
+import { fetchPubs, fetchXp, fetchAchievements, fetchPinned, setPinned } from '../api.mjs';
 import { tierFor } from '../xp.mjs';
+import { ACHIEVEMENTS } from '../achievements.mjs';
 
 const el = document.querySelector('.view-ph[data-view="me"]');
 
@@ -294,6 +295,95 @@ export function buildViolins(mine) {
   }).join('') + '</div>';
 }
 
+// ======================= pinned badges =======================
+// Up to 3 earned badges you pin to your profile. The medallion markup + styles
+// are the shared `.ach-*` component (un-scoped from the Levels tab). State lives
+// here so a pin/unpin re-renders only the strip, not the whole stats page.
+let PINS = [];      // ordered array of pinned codes
+let EARNED = {};    // { code: earnedAtMs } — which badges you can pin
+
+function pinMedal(a) {
+  return '<div class="ach-medal ' + a.rarity + '">' +
+    '<div class="ach-rays"></div>' +
+    '<div class="ach-ring"><div class="ach-disc"><span class="ach-emoji">' + a.emoji +
+      '</span><span class="ach-gloss"></span></div></div>' +
+  '</div>';
+}
+
+function pinsHtml(pinned, earned) {
+  const codes = (pinned || []).filter((c) => ACHIEVEMENTS.some((a) => a.code === c && earned[c]));
+  const slots = [0, 1, 2].map((i) => {
+    const code = codes[i];
+    if (code) {
+      const a = ACHIEVEMENTS.find((x) => x.code === code);
+      return '<div class="me-pin filled">' + pinMedal(a) +
+        '<div class="me-pin-name">' + escapeHtml(a.name) + '</div>' +
+        '<button class="me-pin-x" type="button" data-remove="' + code +
+          '" aria-label="Unpin ' + escapeHtml(a.name) + '">×</button>' +
+      '</div>';
+    }
+    return '<button class="me-pin empty" type="button" data-add="1">' +
+      '<span class="me-pin-plus">+</span><span class="me-pin-hint">Pin a badge</span></button>';
+  }).join('');
+  return '<div class="sec-label">Pinned badges</div><div class="me-pins">' + slots + '</div>';
+}
+
+function pickerHtml(earned, pinned) {
+  const items = ACHIEVEMENTS.filter((a) => earned[a.code]);
+  const full = (pinned || []).length >= 3;
+  const body = items.length
+    ? items.map((a) => {
+        const on = (pinned || []).indexOf(a.code) !== -1;
+        const dis = on || full;
+        return '<button class="me-pick' + (on ? ' is-on' : '') + '" type="button" data-pick="' + a.code + '"' +
+          (dis ? ' disabled' : '') + '>' + pinMedal(a) +
+          '<span class="me-pick-nm">' + escapeHtml(a.name) + '</span>' +
+          (on ? '<span class="me-pick-tag">Pinned</span>' : '') + '</button>';
+      }).join('')
+    : '<div class="me-pick-empty">Earn some badges first — they’ll show up here to pin.</div>';
+  return '<div class="me-pick-modal" id="mePickModal">' +
+    '<div class="me-pick-card">' +
+      '<div class="me-pick-head"><span>Pin a badge' +
+        (items.length && full ? ' · unpin one to swap' : '') + '</span>' +
+        '<button class="me-pick-close" type="button" data-close="1">Done</button></div>' +
+      '<div class="me-pick-grid">' + body + '</div>' +
+    '</div></div>';
+}
+
+function refreshPins() {
+  const w = document.getElementById('mePinsWrap');
+  if (w) w.innerHTML = pinsHtml(PINS, EARNED);
+}
+function openPicker() {
+  if (document.getElementById('mePickModal')) return;
+  el.insertAdjacentHTML('beforeend', pickerHtml(EARNED, PINS));
+}
+function closePicker() {
+  const m = document.getElementById('mePickModal');
+  if (m) m.remove();
+}
+async function savePins() {
+  try { PINS = await setPinned(PINS); } catch (e) { console.warn(e); }
+}
+
+el.addEventListener('click', async (e) => {
+  if (e.target.closest('[data-close]') || e.target.id === 'mePickModal') { closePicker(); return; }
+  if (e.target.closest('[data-add]')) { openPicker(); return; }
+  const pick = e.target.closest('[data-pick]');
+  if (pick) {
+    const code = pick.getAttribute('data-pick');
+    if (PINS.indexOf(code) === -1 && PINS.length < 3) { PINS.push(code); await savePins(); refreshPins(); }
+    closePicker();
+    return;
+  }
+  const rem = e.target.closest('[data-remove]');
+  if (rem) {
+    PINS = PINS.filter((c) => c !== rem.getAttribute('data-remove'));
+    await savePins();
+    refreshPins();
+  }
+});
+
 // ======================= page render =======================
 function tile(value, label) {
   return '<div class="stat-tile"><b>' + value + '</b><span>' + label + '</span></div>';
@@ -373,6 +463,10 @@ export function renderMePage(container, ctx) {
     return;
   }
 
+  // pinned badges strip (only in the live app, where a pin context is supplied)
+  const pins = (ctx.pinned !== undefined)
+    ? '<div id="mePinsWrap">' + pinsHtml(ctx.pinned, ctx.earned || {}) + '</div>' : '';
+
   const tiles =
     '<div class="me-tiles">' +
       tile(st.count, 'Plotted') +
@@ -408,7 +502,7 @@ export function renderMePage(container, ctx) {
     '</div>' +
     tendencyCard(st.tendency);
 
-  container.innerHTML = hero + tiles + fingerprint + violins + spread + timeline + supers +
+  container.innerHTML = hero + pins + tiles + fingerprint + violins + spread + timeline + supers +
     '<p class="me-foot">All plotted from your own ratings.</p>';
 }
 
@@ -422,18 +516,20 @@ async function render() {
 
   let pubs = [], xp = 0;
   try {
-    const [p, x] = await Promise.all([
+    const [p, x, ach, pinned] = await Promise.all([
       fetchPubs(),
-      fetchXp().catch(() => ({ xp: 0 }))     // XP is a nicety here; never block the stats on it
+      fetchXp().catch(() => ({ xp: 0 })),      // XP is a nicety here; never block the stats on it
+      fetchAchievements().catch(() => ({})),   // earned set → which badges are pinnable
+      fetchPinned().catch(() => [])            // your current pins
     ]);
-    pubs = p; xp = x.xp;
+    pubs = p; xp = x.xp; EARNED = ach || {}; PINS = (pinned || []).slice(0, 3);
   } catch (e) {
     if (token !== loadToken) return;
     box.innerHTML = '<div class="me-loading">Could not load your stats.</div>';
     return;
   }
   if (token !== loadToken) return;
-  renderMePage(box, { profile: S.PROFILE, group: S.ACTIVE_GROUP, pubs, xp });
+  renderMePage(box, { profile: S.PROFILE, group: S.ACTIVE_GROUP, pubs, xp, earned: EARNED, pinned: PINS });
 }
 
 registerView('me', { el, onShow: render });

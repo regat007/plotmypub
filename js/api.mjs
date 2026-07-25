@@ -254,6 +254,73 @@ export async function fetchAchievements() {
   return earned;
 }
 
+/** getTitleHolders(): who CURRENTLY holds each of the three live Title badges in
+ *  the active group, computed on read (the ledger only records the one-time XP,
+ *  not who holds it now). Returns { northerner|southerner|big_apple: {profileId,
+ *  name} | null }. Big Apple is null when nobody strictly leads (a tie). London
+ *  is the same fixed box the SQL uses (0007_titles.sql). Fail-soft to {}. */
+export async function fetchTitleHolders() {
+  const gid = S.ACTIVE_GROUP.id;
+  const { data, error } = await sb
+    .from('ratings')
+    .select('profile_id,pubs!inner(id,lat,lng),profiles!inner(display_name)')
+    .eq('group_id', gid);
+  if (error) { console.warn(error); return {}; }
+
+  const IN_LONDON = (lat, lng) =>
+    lat >= 51.28 && lat <= 51.70 && lng >= -0.52 && lng <= 0.34;
+
+  let north = null, south = null;                 // { lat, profileId }
+  const londonPubs = {};                          // profileId -> Set(pubId)
+  const nameById = {};
+
+  (data || []).forEach((r) => {
+    const p = r.pubs; if (!p || p.lat == null) return;
+    nameById[r.profile_id] = r.profiles ? r.profiles.display_name : null;
+    if (!north || p.lat > north.lat) north = { lat: p.lat, profileId: r.profile_id };
+    if (!south || p.lat < south.lat) south = { lat: p.lat, profileId: r.profile_id };
+    if (IN_LONDON(p.lat, p.lng)) {
+      (londonPubs[r.profile_id] = londonPubs[r.profile_id] || new Set()).add(p.id);
+    }
+  });
+
+  // Big Apple: the profile with a strictly-highest distinct-London-pub count.
+  let leadId = null, lead = 0, tied = false;
+  Object.keys(londonPubs).forEach((pid) => {
+    const n = londonPubs[pid].size;
+    if (n > lead) { lead = n; leadId = pid; tied = false; }
+    else if (n === lead) { tied = true; }
+  });
+
+  const holder = (o) => (o ? { profileId: o.profileId, name: nameById[o.profileId] || null } : null);
+  return {
+    northerner: holder(north),
+    southerner: holder(south),
+    big_apple: (leadId && lead >= 1 && !tied)
+      ? { profileId: leadId, name: nameById[leadId] || null }
+      : null
+  };
+}
+
+/** getPinned(): the badge codes the signed-in profile has pinned to their
+ *  profile (max 3, ordered). Fail-soft to []. */
+export async function fetchPinned() {
+  const { data, error } = await sb
+    .from('profiles').select('pinned_badges').eq('id', S.PROFILE.id).single();
+  if (error) { console.warn(error); return []; }
+  return (data && data.pinned_badges) || [];
+}
+
+/** setPinned(): replace the signed-in profile's pinned badges (capped at 3).
+ *  Returns the saved array. */
+export async function setPinned(codes) {
+  const clean = (codes || []).slice(0, 3);
+  const { error } = await sb.from('profiles')
+    .update({ pinned_badges: clean }).eq('id', S.PROFILE.id);
+  if (error) throw error;
+  return clean;
+}
+
 // ---------- photos (Phase 6) ----------
 var PHOTO_BUCKET = 'pub-photos';
 
