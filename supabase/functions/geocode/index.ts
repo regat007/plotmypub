@@ -3,14 +3,18 @@
 // Ports the old Apps Script lookup_() to a Supabase Edge Function.
 // Keeps the Google Places key SERVER-SIDE — the browser never sees it.
 //
-// Flow: Places Text Search (bar, GB) first; on miss, fall back to the
-// Geocoding API (the Deno equivalent of Maps.newGeocoder()). Returns
-// { lat, lng, placeId } or { error }.
+// Flow: Places Text Search first; on miss, fall back to the Geocoding API to get
+// lat/lng/placeId. Then enrich from the coordinates using FREE, KEYLESS services:
+//   - country (ISO2) + city ← BigDataCloud reverse-geocode-client   (Jet Setter / Mr Worldwide / Drink Driver)
+//   - elevation (metres)    ← Open-Meteo elevation API              (Brew with a View)
+// No new Google APIs are needed beyond the Places/Geocoding you already use.
+//
+// INTERNATIONAL: the query is no longer forced to the UK (used to append 'UK'
+// + regionCode 'GB'), so pubs abroad resolve to their real country/city. Users
+// should include the town — and the country if abroad — in the Area field.
 //
 // Deploy:  npx supabase functions deploy geocode
-// Secret:  npx supabase secrets set GOOGLE_PLACES_KEY=<your places key>
-//          (this is the SERVER key — the one Apps Script called PLACES_API_KEY,
-//           NOT the referrer-restricted browser Maps key)
+// Secret:  npx supabase secrets set GOOGLE_PLACES_KEY=<your server key>
 //
 // Called from the browser with the user's Supabase JWT in the Authorization
 // header, so only signed-in users can spend geocoding quota.
@@ -28,6 +32,37 @@ function json(body: unknown, status = 200): Response {
     status,
     headers: { ...CORS, 'Content-Type': 'application/json' },
   });
+}
+
+// Country (ISO2) + city from coordinates. Free, keyless. Fail-soft to nulls.
+async function reverseGeo(lat: number, lng: number): Promise<{ country: string | null; city: string | null }> {
+  try {
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`;
+    const res = await fetch(url);
+    if (!res.ok) return { country: null, city: null };
+    const d = await res.json();
+    return {
+      country: d.countryCode || null,                          // e.g. 'GB'
+      city: d.city || d.locality || d.principalSubdivision || null,
+    };
+  } catch (e) {
+    console.warn('reverseGeo threw: ' + e);
+    return { country: null, city: null };
+  }
+}
+
+// Elevation in metres from coordinates. Free, keyless. Fail-soft to null.
+async function elevationOf(lat: number, lng: number): Promise<number | null> {
+  try {
+    const url = `https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const d = await res.json();
+    if (Array.isArray(d.elevation) && d.elevation.length) return Math.round(d.elevation[0]);
+  } catch (e) {
+    console.warn('elevationOf threw: ' + e);
+  }
+  return null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -61,9 +96,11 @@ Deno.serve(async (req: Request) => {
   const key = Deno.env.get('GOOGLE_PLACES_KEY');
   if (!key) return json({ error: 'GOOGLE_PLACES_KEY not configured.' }, 500);
 
-  const query = [pub, area, 'UK'].filter(Boolean).join(', ');
+  const query = [pub, area].filter(Boolean).join(', ');
 
-  // --- 1) Places Text Search (mirrors the old primary path) ---
+  let found: { lat: number; lng: number; placeId: string } | null = null;
+
+  // --- 1) Places Text Search (primary; now global, not GB-locked) ---
   try {
     const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
       method: 'POST',
@@ -75,7 +112,6 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         textQuery: query,
         includedType: 'bar',
-        regionCode: 'GB',
         maxResultCount: 1,
       }),
     });
@@ -87,11 +123,7 @@ Deno.serve(async (req: Request) => {
       const data = await res.json();
       if (data.places && data.places.length) {
         const p = data.places[0];
-        return json({
-          lat: p.location.latitude,
-          lng: p.location.longitude,
-          placeId: p.id,
-        });
+        found = { lat: p.location.latitude, lng: p.location.longitude, placeId: p.id };
       }
     } else {
       console.warn(`Places error ${res.status}: ${await res.text()}`);
@@ -100,25 +132,32 @@ Deno.serve(async (req: Request) => {
     console.warn('Places lookup threw: ' + e);
   }
 
-  // --- 2) Geocoding API fallback (mirrors Maps.newGeocoder().setRegion('uk')) ---
-  try {
-    const url = 'https://maps.googleapis.com/maps/api/geocode/json'
-      + `?address=${encodeURIComponent(query)}&region=uk&key=${key}`;
-    const res = await fetch(url);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.status === 'OK' && data.results.length) {
-        const r = data.results[0];
-        return json({
-          lat: r.geometry.location.lat,
-          lng: r.geometry.location.lng,
-          placeId: r.place_id,
-        });
+  // --- 2) Geocoding API fallback ---
+  if (!found) {
+    try {
+      const url = 'https://maps.googleapis.com/maps/api/geocode/json'
+        + `?address=${encodeURIComponent(query)}&key=${key}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === 'OK' && data.results.length) {
+          const r = data.results[0];
+          found = { lat: r.geometry.location.lat, lng: r.geometry.location.lng, placeId: r.place_id };
+        }
       }
+    } catch (e) {
+      console.warn('Geocoder fallback threw: ' + e);
     }
-  } catch (e) {
-    console.warn('Geocoder fallback threw: ' + e);
   }
 
-  return json({ error: `Could not find "${pub}" — check the name and area.` }, 404);
+  if (!found) {
+    return json({ error: `Could not find "${pub}" — check the name and area.` }, 404);
+  }
+
+  // Enrich from the coordinates via the free services (parallel, fail-soft).
+  const [{ country, city }, elevation] = await Promise.all([
+    reverseGeo(found.lat, found.lng),
+    elevationOf(found.lat, found.lng),
+  ]);
+  return json({ ...found, country, city, elevation });
 });

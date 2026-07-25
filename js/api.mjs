@@ -123,7 +123,9 @@ export async function submitPub(payload) {
     .from('pubs')
     .upsert({
       group_id: gid, name: payload.pub, area: payload.area,
-      lat: geo.lat, lng: geo.lng, place_id: geo.placeId
+      lat: geo.lat, lng: geo.lng, place_id: geo.placeId,
+      country: geo.country || null, city: geo.city || null,
+      elevation_m: (geo.elevation != null ? geo.elevation : null)
     }, { onConflict: 'group_id,place_id' })
     .select()
     .single();
