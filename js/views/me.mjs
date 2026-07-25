@@ -14,6 +14,7 @@ import { CATS } from '../config.mjs';
 import { fetchPubs, fetchXp, fetchAchievements, fetchPinned, setPinned } from '../api.mjs';
 import { tierFor } from '../xp.mjs';
 import { ACHIEVEMENTS } from '../achievements.mjs';
+import { refreshMapXp } from '../mapxp.mjs';
 
 const el = document.querySelector('.view-ph[data-view="me"]');
 
@@ -390,7 +391,7 @@ el.addEventListener('click', async (e) => {
     if (PINS.indexOf(code) === -1 && PINS.length < 3) {
       const ok = await savePins(PINS.concat(code));
       refreshPins();
-      if (!ok) pinError();
+      if (ok) refreshMapXp(); else pinError();
     }
     return;
   }
@@ -398,7 +399,7 @@ el.addEventListener('click', async (e) => {
   if (rem) {
     const ok = await savePins(PINS.filter((c) => c !== rem.getAttribute('data-remove')));
     refreshPins();
-    if (!ok) pinError();
+    if (ok) refreshMapXp(); else pinError();
   }
 });
 

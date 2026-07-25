@@ -260,8 +260,12 @@
     }
     #addBtn:hover { background: var(--slate-d); }
     /* minimalist XP badge, top-right, tucked under the add-a-pub button */
-    #mapXp {
+    #mapXpWrap {
       position: absolute; top: 64px; right: 12px; z-index: 5;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 7px;
+    }
+    #mapXpWrap[hidden] { display: none; }
+    #mapXp {
       display: flex; align-items: center; gap: 8px;
       background: #fff; border: 0; border-radius: 20px; padding: 7px 11px 7px 9px;
       box-shadow: 0 3px 12px rgba(0,0,0,.22); cursor: pointer;
@@ -269,6 +273,13 @@
     }
     #mapXp:hover { box-shadow: 0 4px 16px rgba(0,0,0,.28); }
     #mapXp[hidden] { display: none; }
+    /* your pinned badges, floating just under the XP pill */
+    #mapPins {
+      display: flex; align-items: center; gap: 5px;
+      background: #fff; border-radius: 16px; padding: 5px 8px;
+      box-shadow: 0 3px 12px rgba(0,0,0,.22);
+    }
+    #mapPins[hidden] { display: none; }
     #mapXp .mx-ic { font-size: 16px; line-height: 1; }
     #mapXp .mx-bar {
       width: 46px; height: 5px; border-radius: 999px;
@@ -486,7 +497,7 @@
       }
       /* Add-a-pub moves to the bottom on mobile, so the badge rises to the top,
          mirroring the avatar (#userBar, top:12 left:12) on the right. */
-      #mapXp { top: 12px; right: 12px; }
+      #mapXpWrap { top: 12px; right: 12px; }
 
       #form {
         top: 0; left: 0; right: 0; bottom: 0; width: auto;
@@ -681,6 +692,7 @@
     }
     .social-view .lb-tier { font-size: 11px; color: var(--muted); margin-top: 1px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .social-view .lb-row .pin-strip { margin-left: 2px; }
     .social-view .lb-xp {
       flex: 0 0 auto; font-size: 14px; font-weight: bold; color: var(--slate);
       font-variant-numeric: tabular-nums;
@@ -1153,6 +1165,18 @@
 
     @keyframes ach-spin { to { transform: rotate(360deg); } }
     @keyframes ach-sheen { 0% { left: -70%; } 22% { left: 135%; } 100% { left: 135%; } }
+
+    /* ---- mini medallion (pinned badges on the map pill + leaderboard) ---- */
+    .ach-medal.mini { width: 24px; height: 24px; margin: 0; }
+    .ach-medal.mini .ach-ring { width: 24px; height: 24px; padding: 2px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.28), inset 0 1px 1px rgba(255,255,255,.55), inset 0 -1px 2px rgba(0,0,0,.3); }
+    .ach-medal.mini .ach-disc { font-size: 11px;
+      box-shadow: inset 0 1px 2px rgba(255,255,255,.45), inset 0 -2px 3px rgba(0,0,0,.14); }
+    .ach-medal.mini .ach-emoji { filter: drop-shadow(0 1px 1px rgba(0,0,0,.22)); }
+    /* keep a row of them calm: no rays, gloss, sheen or holo rim at this size */
+    .ach-medal.mini .ach-rays, .ach-medal.mini .ach-gloss,
+    .ach-medal.mini .ach-disc::after, .ach-medal.mini .ach-ring::after { display: none; }
+    .pin-strip { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; }
 
     /* lock chip */
     .ach-lock { position: absolute; right: 3px; bottom: 3px; z-index: 5;

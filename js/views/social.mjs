@@ -9,6 +9,7 @@ import { S, colourFor, escapeHtml } from '../core.mjs';
 import { CATS } from '../config.mjs';
 import { fetchMembers, fetchPubs, fetchXpTotals } from '../api.mjs';
 import { tierFor } from '../xp.mjs';
+import { pinnedStripHtml } from '../badges.mjs';
 
 const el = document.querySelector('.view-ph[data-view="social"]');
 
@@ -99,6 +100,7 @@ function boardRowHtml(r, rank) {
       '<div class="lb-name">' + escapeHtml(r.name) + you + '</div>' +
       '<div class="lb-tier">' + escapeHtml(r.tier.title) + '</div>' +
     '</div>' +
+    pinnedStripHtml(r.pinned) +
     '<span class="lb-xp">' + r.xp.toLocaleString('en-GB') + '<small>XP</small></span>' +
   '</div>';
 }
@@ -124,7 +126,7 @@ function buildBoard(members, totals) {
   const meId = S.PROFILE && S.PROFILE.id;
   boardRows = members.map((m) => {
     const xp = totals[m.id] || 0;
-    return { id: m.id, name: m.name, you: m.id === meId, xp, tier: tierFor(xp) };
+    return { id: m.id, name: m.name, you: m.id === meId, xp, tier: tierFor(xp), pinned: m.pinned || [] };
   });
   // most XP first; ties broken alphabetically so the order is stable
   boardRows.sort((a, b) => (b.xp - a.xp) || a.name.localeCompare(b.name));

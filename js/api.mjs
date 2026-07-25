@@ -78,11 +78,15 @@ export async function fetchMembers() {
   const gid = S.ACTIVE_GROUP.id;
   const { data, error } = await sb
     .from('group_members')
-    .select('profile_id,profiles!inner(display_name)')
+    .select('profile_id,profiles!inner(display_name,pinned_badges)')
     .eq('group_id', gid);
   if (error) { console.warn(error); return []; }
   return (data || [])
-    .map((m) => ({ id: m.profile_id, name: m.profiles && m.profiles.display_name }))
+    .map((m) => ({
+      id: m.profile_id,
+      name: m.profiles && m.profiles.display_name,
+      pinned: (m.profiles && m.profiles.pinned_badges) || []
+    }))
     .filter((m) => m.name);
 }
 

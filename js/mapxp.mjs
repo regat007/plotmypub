@@ -6,8 +6,9 @@
 // pushed the bar along). See memory: xp-levels-design.
 import { $ } from './core.mjs';
 import { showView } from './router.mjs';
-import { fetchXp } from './api.mjs';
+import { fetchXp, fetchPinned } from './api.mjs';
 import { tierFor, progress } from './xp.mjs';
+import { pinnedStripHtml } from './badges.mjs';
 
 let wired = false;
 function wire(el) {
@@ -20,16 +21,29 @@ function wire(el) {
   wired = true;
 }
 
+/** Paint your pinned badges under the pill. Fail-soft: an empty/failed read just
+ *  leaves the strip hidden. */
+async function refreshMapPins() {
+  const box = $('mapPins');
+  if (!box) return;
+  let pins = [];
+  try { pins = await fetchPinned(); } catch (e) { pins = []; }
+  const html = pinnedStripHtml(pins);
+  box.innerHTML = html;
+  box.hidden = !html;
+}
+
 /** Fetch the signed-in user's XP and paint the badge. Safe to call repeatedly;
  *  stays hidden if XP can't be read (e.g. the ledger migration isn't pushed). */
 export async function refreshMapXp() {
+  const wrap = $('mapXpWrap');
   const el = $('mapXp');
-  if (!el) return;
+  if (!wrap || !el) return;
   wire(el);
 
   let xp = 0;
   try { xp = (await fetchXp()).xp || 0; }
-  catch (e) { el.hidden = true; return; }
+  catch (e) { wrap.hidden = true; return; }
 
   const tier = tierFor(xp);
   const p = progress(xp);
@@ -37,5 +51,6 @@ export async function refreshMapXp() {
   el.querySelector('.mx-ic').textContent = tier.icon;
   el.querySelector('.mx-fill').style.width = pct + '%';
   el.setAttribute('aria-label', tier.title + ' · ' + xp + ' XP — open Levels');
-  el.hidden = false;
+  wrap.hidden = false;
+  refreshMapPins();
 }
