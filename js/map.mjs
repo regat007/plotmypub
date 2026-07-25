@@ -15,6 +15,7 @@ import {
 import { loadGroups } from './auth.mjs';
 import { showView, registerView } from './router.mjs';
 import { refreshMapXp } from './mapxp.mjs';
+import { checkForUnlocks } from './unlock.mjs';
 
 // ===========================================================
 //  MAP APP
@@ -518,6 +519,7 @@ $('save').addEventListener('click', function () {
       renderPubs();          // reload group data so averages/pins reflect the new rating
       loadActivity();
       refreshMapXp();        // the rating may have earned XP — nudge the badge
+      checkForUnlocks();     // …and may have earned badges — celebrate any new ones
       $('f_pub').value = '';
       $('f_area').value = '';
       $('f_note').value = '';
@@ -893,6 +895,7 @@ export async function enterApp() {
   rememberGroup();
   syncMapGroupBar();
   refreshMapXp();             // paint the top-right level badge
+  checkForUnlocks();          // seed the badge snapshot on first run; catch cross-device unlocks
   try {
     await loadGoogleMaps();
     if (!MAP) await initMap();

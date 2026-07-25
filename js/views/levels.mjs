@@ -10,9 +10,17 @@ import { registerView } from '../router.mjs';
 import { S, escapeHtml } from '../core.mjs';
 import { TIERS, tierIndexFor, progress, XP_LABELS } from '../xp.mjs';
 import { ACHIEVEMENTS, RARITY, RARITY_ORDER, isHidden, TOTAL } from '../achievements.mjs';
-import { fetchXp, fetchAchievements, fetchTitleHolders } from '../api.mjs';
+import { fetchXp, fetchAchievements, fetchTitleHolders, fetchPinned, setPinned } from '../api.mjs';
+import { refreshMapXp } from '../mapxp.mjs';
 
 const el = document.querySelector('.view-ph[data-view="levels"]');
+
+// Live state for tap-to-pin: the earned set + holders from the last render, and
+// the badges pinned to the profile. Kept at module scope so a pin/unpin can
+// re-paint just the achievements block without reloading the whole tab.
+let AEARNED = {};
+let AHOLDERS = {};
+let PINS = [];
 
 // ---- Achievements grid --------------------------------------------------
 // A badge = a rarity-framed medallion (blue/amber/purple/gold) over its emoji.
@@ -46,7 +54,16 @@ function achCard(a, earned, holders) {
   const r = RARITY[a.rarity];
   const obj = hidden ? 'Hidden — unlock to reveal' : a.objective;
   const premium = shown && isHidden(a.rarity) ? ' ach-card-' + a.rarity : '';
-  return '<div class="ach-badge ' + a.rarity + (locked ? ' ach-locked' : '') + premium + '">' +
+  // Earned badges are tappable: a tap pins them to your profile (up to 3).
+  const pinned = PINS.indexOf(a.code) !== -1;
+  const cls = 'ach-badge ' + a.rarity + (locked ? ' ach-locked' : ' ach-earned') + premium + (pinned ? ' ach-pinned' : '');
+  const pinAttrs = shown
+    ? ' role="button" tabindex="0" data-pin="' + a.code + '" aria-pressed="' + (pinned ? 'true' : 'false') +
+      '" aria-label="' + (pinned ? 'Unpin ' : 'Pin ') + escapeHtml(a.name) + ' on your profile"'
+    : '';
+  const pinDot = shown ? '<span class="ach-pin" aria-hidden="true">' + (pinned ? '📌' : '📍') + '</span>' : '';
+  return '<div class="' + cls + '"' + pinAttrs + '>' +
+    pinDot +
     achMedal(a, shown) +
     '<div class="ach-name">' + escapeHtml(a.name) + '</div>' +
     '<div class="ach-meta"><span class="ach-chip ' + a.rarity + '">' + r.label + '</span>' +
@@ -65,10 +82,62 @@ function achievementsHtml(earned, holders) {
       ' · +' + RARITY[k].xp + ' XP</div>' +
       '<div class="ach-grid">' + items.map((a) => achCard(a, earned, holders)).join('') + '</div>';
   }).join('');
+  const nPins = PINS.filter((c) => earned[c]).length;
+  const hint = got
+    ? '<div class="ach-pinhint">Tap a badge to pin it to your profile · <b>' + nPins + '</b>/3 pinned</div>'
+    : '';
   return '<div class="ach-head"><div class="sec-label">Achievements</div>' +
     '<div class="ach-count">' + got + ' / ' + TOTAL + '</div></div>' +
-    sections;
+    hint + sections;
 }
+
+// Re-paint only the achievements block after a pin/unpin — keeps the hero,
+// tier ladder and XP feed (and the page's scroll position) untouched.
+function rerenderAch() {
+  const box = document.getElementById('lvAch');
+  if (box) box.innerHTML = achievementsHtml(AEARNED, AHOLDERS);
+}
+
+// A brief bottom-of-tab toast for pin feedback / the 3-badge cap.
+let toastTimer;
+function lvToast(msg) {
+  let t = document.getElementById('lvToast');
+  if (!t) { t = document.createElement('div'); t.id = 'lvToast'; t.className = 'lv-toast'; el.appendChild(t); }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// Toggle a badge's pin, persisting through setPinned. PINS is only committed if
+// the write lands (mirrors me.mjs) so a failure reverts cleanly on re-paint.
+async function togglePin(code) {
+  if (!AEARNED[code]) return;
+  const on = PINS.indexOf(code) !== -1;
+  let next;
+  if (on) {
+    next = PINS.filter((c) => c !== code);
+  } else {
+    if (PINS.length >= 3) { lvToast('You can pin 3 — unpin one to swap'); return; }
+    next = PINS.concat(code);
+  }
+  const prev = PINS;
+  try { PINS = await setPinned(next); }
+  catch (e) { console.warn(e); PINS = prev; rerenderAch(); lvToast('Couldn’t save — please try again'); return; }
+  rerenderAch();
+  refreshMapXp();                                  // the map pill mirrors your pins
+  lvToast(on ? 'Unpinned' : '📌 Pinned to your profile');
+}
+
+el.addEventListener('click', (e) => {
+  const card = e.target.closest('[data-pin]');
+  if (card) togglePin(card.getAttribute('data-pin'));
+});
+el.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const card = e.target.closest('[data-pin]');
+  if (card) { e.preventDefault(); togglePin(card.getAttribute('data-pin')); }
+});
 
 function fmt(n) { return Math.round(n).toLocaleString('en-GB'); }
 
@@ -174,11 +243,12 @@ async function render() {
   let earned = {};
   let holders = {};
   try {
-    // achievements + holders fail soft to {} on their own, so only fetchXp rejects here
-    const [xpData, ach, hold] = await Promise.all([
-      fetchXp(), fetchAchievements(), fetchTitleHolders().catch(() => ({}))
+    // achievements + holders + pins fail soft on their own, so only fetchXp rejects here
+    const [xpData, ach, hold, pins] = await Promise.all([
+      fetchXp(), fetchAchievements(), fetchTitleHolders().catch(() => ({})), fetchPinned().catch(() => [])
     ]);
     data = xpData; earned = ach || {}; holders = hold || {};
+    AEARNED = earned; AHOLDERS = holders; PINS = (pins || []).slice(0, 3);
   }
   catch (e) {
     if (token !== loadToken) return;
@@ -197,7 +267,7 @@ async function render() {
         '<div class="lv-empty-title">' + escapeHtml(TIERS[0].title) + '</div>' +
         '<div class="lv-empty-sub">Rate your first pub to start earning XP and begin the climb toward ' +
           escapeHtml(TIERS[TIERS.length - 1].title) + '.</div>' +
-      '</div>' + achievementsHtml(earned, holders);
+      '</div>' + '<div id="lvAch">' + achievementsHtml(earned, holders) + '</div>';
     return;
   }
 
@@ -211,7 +281,7 @@ async function render() {
     (rows.length
       ? '<div class="sec-label">Recent XP</div><div class="lv-feed">' + feedHtml(rows) + '</div>'
       : '') +
-    achievementsHtml(earned, holders);
+    '<div id="lvAch">' + achievementsHtml(earned, holders) + '</div>';
 }
 
 // The tier ladder is tucked away by default; tapping your level reveals it.
