@@ -213,24 +213,51 @@ function ladderHtml(xp) {
   }).join('');
 }
 
-// One tight row per earning moment: the pub that earned it, a muted line of the
-// bonus reasons (the base "Rated a pub" is implied by naming the pub) + when.
-const BONUS_LABELS = { first_map: 'First to map', new_area: 'New area', with_note: 'Note', with_photo: 'Photo' };
+// One tight row per earning moment: the pub that earned it, the bonus reasons as
+// scannable icon pills (the base "Rated a pub" is implied by naming the pub), and
+// when. Each pill carries a label for hover + screen readers.
+const BONUS_META = {
+  first_map:  { icon: '🥇', label: 'First to map' },
+  new_area:   { icon: '🗺️', label: 'New area' },
+  with_note:  { icon: '📝', label: 'Wrote a note' },
+  with_photo: { icon: '📸', label: 'Added a photo' }
+};
 
 function feedHtml(rows) {
   return rows.slice(0, 12).map((r) => {
     const hasBase = r.types.indexOf('rate_pub') !== -1;
     const title = r.pub || (hasBase ? XP_LABELS.rate_pub : (XP_LABELS[r.types[0]] || r.types[0]));
-    const bonuses = r.types.filter((t) => t !== 'rate_pub').map((t) => BONUS_LABELS[t] || XP_LABELS[t] || t);
-    const bits = bonuses.concat(timeAgo(r.at) || []);   // reasons first, then time
+    const pills = r.types.filter((t) => t !== 'rate_pub' && BONUS_META[t]).map((t) => {
+      const m = BONUS_META[t];
+      return '<span class="lv-pill" title="' + m.label + '" aria-label="' + m.label + '">' + m.icon + '</span>';
+    }).join('');
+    const time = timeAgo(r.at);
     return '<div class="lv-ev">' +
       '<div class="lv-ev-body">' +
         '<div class="lv-ev-title">' + escapeHtml(title) + '</div>' +
-        (bits.length ? '<div class="lv-ev-sub">' + escapeHtml(bits.join(' · ')) + '</div>' : '') +
+        (pills ? '<div class="lv-ev-pills">' + pills + '</div>' : '') +
+        (time ? '<div class="lv-ev-time">' + escapeHtml(time) + '</div>' : '') +
       '</div>' +
       '<div class="lv-ev-amt">+' + fmt(r.total) + '</div>' +
     '</div>';
   }).join('');
+}
+
+// A one-line momentum strip above the feed: what you've banked in the last 7 days
+// and your best single earning moment. Returns '' when nothing landed this week,
+// so a quiet stretch doesn't show an empty "+0".
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+function momentumHtml(rows) {
+  const since = Date.now() - WEEK_MS;
+  const wk = rows.filter((r) => r.at && r.at >= since);
+  if (!wk.length) return '';
+  const total = wk.reduce((a, r) => a + r.total, 0);
+  const best = wk.reduce((a, r) => (r.total > a.total ? r : a), wk[0]);
+  const bestBit = wk.length > 1 && best.pub
+    ? ' · best <b>' + escapeHtml(best.pub) + '</b> +' + fmt(best.total)
+    : '';
+  return '<div class="lv-momentum"><span class="lv-mom-fig">+' + fmt(total) +
+    '</span> this week' + bestBit + '</div>';
 }
 
 let loadToken = 0;
@@ -278,10 +305,11 @@ async function render() {
       '<div class="sec-label">Tiers</div>' +
       '<div class="lv-ladder">' + ladderHtml(xp) + '</div>' +
     '</div>' +
+    '<div id="lvAch">' + achievementsHtml(earned, holders) + '</div>' +
     (rows.length
-      ? '<div class="sec-label">Recent XP</div><div class="lv-feed">' + feedHtml(rows) + '</div>'
-      : '') +
-    '<div id="lvAch">' + achievementsHtml(earned, holders) + '</div>';
+      ? '<div class="sec-label">Recent XP</div>' + momentumHtml(rows) +
+        '<div class="lv-feed">' + feedHtml(rows) + '</div>'
+      : '');
 }
 
 // The tier ladder is tucked away by default; tapping your level reveals it.
