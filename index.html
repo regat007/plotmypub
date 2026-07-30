@@ -2,8 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+
+  <!-- ---------- canonical origin guard (must stay first, inline) ----------
+       iOS saves the EXACT tab URL when you tap "Add to Home Screen", and a
+       home-screen web app only launches standalone if that URL sits inside the
+       manifest scope (https://plotmypub.com/). Arrive on http://, on www., or
+       on the old github.io address and the saved icon opens a normal Safari tab
+       instead — full browser chrome, search bar at the bottom — even though the
+       install steps were followed correctly. Those arrivals all reach us via a
+       redirect, and iOS treats the pre-redirect URL as the one to save.
+       Normalising the address bar on load means whatever the user shares or
+       installs from is already in scope. -->
+  <script>
+    (function () {
+      var CANON = 'plotmypub.com';
+      var h = location.hostname;
+      if (h === CANON && location.protocol === 'https:') return;
+      if (h === 'localhost' || h === '127.0.0.1' || h === '') return;   // local dev
+      // Only carry the path across when it's the same site on the wrong
+      // scheme/subdomain; other hosts (github.io) have a different path root.
+      var path = (h === CANON || h === 'www.' + CANON) ? location.pathname : '/';
+      location.replace('https://' + CANON + path + location.search + location.hash);
+    })();
+  </script>
+
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>PlotMyPub</title>
+  <link rel="canonical" href="https://plotmypub.com/">
   <meta name="description" content="Rate pubs with your friends and see them on a map.">
 
   <!-- ---------- PWA (Phase 7.5) ---------- -->
@@ -64,6 +89,11 @@
         </div>
         <button id="send" class="primary">Email me a link</button>
         <div id="signinMsg" class="msg"></div>
+
+        <p class="legal">
+          By signing in you agree to how we handle your data, set out in our
+          <a href="/privacy.html">Privacy Policy</a>.
+        </p>
       </section>
 
       <section id="s-sent" class="hidden">
