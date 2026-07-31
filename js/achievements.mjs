@@ -21,7 +21,7 @@ export const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary'];
 // ship for a locked one (server-side eval keeps them genuinely secret).
 export function isHidden(rarity) { return rarity === 'epic' || rarity === 'legendary'; }
 
-// The 25 badges. `code` is stable and doubles as the ledger type suffix
+// The 29 badges. `code` is stable and doubles as the ledger type suffix
 // ('ach:' + code); renaming the display `name` never orphans earned rows.
 // `title: true` marks a comparative badge held by one person at a time
 // (computed live, not in the append-only ledger — first win pays a one-off XP).
@@ -36,6 +36,7 @@ export const ACHIEVEMENTS = [
   { code: 'pub_crawler_1',    name: 'Pub Crawler I',     emoji: '🚶', rarity: 'common', objective: 'Rate 3 pubs in one day' },
   { code: 'going_sober',      name: 'Going Sober',       emoji: '🚱', rarity: 'common', objective: 'Go four weeks without rating a pub' },
   { code: 'first_beer',       name: 'I Remember My First Beer', emoji: '🍼', rarity: 'common', objective: 'Plot your first pub' },
+  { code: 'sunday_scaries',   name: 'Sunday Scaries',    emoji: '😰', rarity: 'common', objective: 'Rate a pub on a Sunday evening' },
 
   // ---- Rare ----
   { code: 'poor_me',          name: 'Poor Me',           emoji: '🥲', rarity: 'rare', objective: 'Give a pub under 1.5 for value' },
@@ -47,6 +48,7 @@ export const ACHIEVEMENTS = [
   { code: 'big_apple',        name: 'Big Apple',         emoji: '🎡', rarity: 'rare', objective: 'Hold the most London pubs in your group', title: true },
   { code: 'northerner',       name: 'Northerner',        emoji: '❄️', rarity: 'rare', objective: 'Map the furthest-north pub in your group', title: true },
   { code: 'southerner',       name: 'Southerner',        emoji: '🌴', rarity: 'rare', objective: 'Map the furthest-south pub in your group', title: true },
+  { code: 'unemployed',       name: 'Unemployed',        emoji: '🛋️', rarity: 'rare', objective: 'Rate a pub on a weekday morning' },
 
   // ---- Epic (objective hidden until unlocked) ----
   { code: 'diamond_in_the_rough', name: 'Diamond in the Rough', emoji: '💎', rarity: 'epic', objective: 'Score a pub under 2 for location but over 4 for vibe' },
@@ -54,9 +56,11 @@ export const ACHIEVEMENTS = [
   { code: 'jet_setter',       name: 'Jet Setter',        emoji: '✈️', rarity: 'epic', objective: 'Rate a pub outside the UK' },
   { code: 'drink_driver',     name: 'Drink Driver',      emoji: '🚗', rarity: 'epic', objective: 'Rate pubs in two cities on the same day' },
   { code: 'pub_crawler_3',    name: 'Pub Crawler III',   emoji: '🏃', rarity: 'epic', objective: 'Rate 10 pubs in one day' },
+  { code: 'big_spender',      name: 'Big Spender',       emoji: '💸', rarity: 'epic', objective: 'Rate 3 pubs under 2.5 for value in 24 hours' },
 
   // ---- Legendary (objective hidden until unlocked) ----
   { code: 'alcoholic',        name: 'Alcoholic',         emoji: '🥴', rarity: 'legendary', objective: 'Rate a pub seven days running' },
+  { code: 'hundred_club',     name: 'Hundred Club',      emoji: '💯', rarity: 'legendary', objective: 'Rate 100 pubs' },
   { code: 'mr_worldwide',     name: 'Mr Worldwide',      emoji: '🌍', rarity: 'legendary', objective: 'Rate pubs in 10 different countries' }
 ];
 
