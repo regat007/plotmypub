@@ -296,8 +296,11 @@ end $$;
 
 -- ---------------------------------------------------------------- grants
 
--- gen_invite_code() is deliberately NOT granted: it is only ever called from
--- inside the definer functions above, which run as the owner.
+-- gen_invite_code() is deliberately left off this list: it is only ever called
+-- from inside the definer functions above, which run as the owner.
+-- CAVEAT (found after this migration shipped): omitting it from a grant list is
+-- NOT the same as it being unreachable. Postgres grants EXECUTE to PUBLIC on
+-- every new function, so it stayed callable by `anon` until 0013 revoked it.
 grant execute on function
   is_group_owner(uuid),
   rotate_invite_code(uuid),
