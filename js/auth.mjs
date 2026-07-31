@@ -15,6 +15,8 @@ function showGate(id) {
   $('gate').classList.remove('hidden');
   $('app').classList.add('hidden');
   GATE_SECTIONS.forEach((s) => $(s).classList.toggle('hidden', s !== id));
+  // One-shot: only the create handler re-shows it, immediately after this call.
+  $('createdNote').classList.add('hidden');
 }
 
 // A ?join=<invite word> link stashes the word here on load, so it survives the
@@ -149,23 +151,40 @@ $('saveName').onclick = async () => {
 };
 
 // ---- join / create group ----
+// join_group returns NULL for a code that matches nothing rather than raising:
+// it has to record the failed attempt for the brute-force throttle, and an
+// exception would roll that write back. So a miss is `data == null`, not an
+// error. Errors here mean something else went wrong — including being throttled
+// after 10 bad guesses in an hour. See 0012_lockdown.sql.
 $('join').onclick = async () => {
   const code = $('code').value.trim();
   if (!code) { setMsg($('groupMsg'), 'Enter the invite word.', 'bad'); return; }
   $('join').disabled = true; setMsg($('groupMsg'), 'Joining…');
-  const { error } = await sb.rpc('join_group', { p_code: code });
+  const { data, error } = await sb.rpc('join_group', { p_code: code });
   $('join').disabled = false;
   if (error) { setMsg($('groupMsg'), error.message, 'bad'); return; }
+  if (!data) { setMsg($('groupMsg'), 'No group found for that invite word.', 'bad'); return; }
   loadGroups().then(() => showGate('s-groups'));
 };
+
+// The invite word is generated server-side (create_group takes only a name now),
+// so nobody can pick something short and guessable. Show the new code straight
+// away — it's the one thing they need in order to invite anyone.
 $('create').onclick = async () => {
-  const name = $('newName').value.trim(), code = $('newCode').value.trim();
-  if (!name || !code) { setMsg($('groupMsg'), 'Name the group and give it an invite word.', 'bad'); return; }
+  const name = $('newName').value.trim();
+  if (!name) { setMsg($('groupMsg'), 'Name the group.', 'bad'); return; }
   $('create').disabled = true; setMsg($('groupMsg'), 'Creating…');
-  const { error } = await sb.rpc('create_group', { p_name: name, p_invite_code: code });
+  const { data, error } = await sb.rpc('create_group', { p_name: name });
   $('create').disabled = false;
   if (error) { setMsg($('groupMsg'), error.message, 'bad'); return; }
-  loadGroups().then(() => showGate('s-groups'));
+  await loadGroups();
+  showGate('s-groups');                       // clears createdNote, so set it after
+  if (data) $('groupSel').value = data.id;    // preselect the group they just made
+  const note = $('createdNote');
+  note.textContent = 'Group created. Its invite word is "' +
+    (data && data.invite_code) +
+    '" — you can share it any time from the menu on the map.';
+  note.classList.remove('hidden');
 };
 
 async function doSignOut() { await sb.auth.signOut(); S.PROFILE = null; S.ACTIVE_GROUP = null; showGate('s-signin'); }

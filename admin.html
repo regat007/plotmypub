@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PlotMyPub — Admin</title>
+
+  <!-- Not a public page: keep it out of search results entirely. Access is
+       enforced server-side by require_admin(); this is only tidiness. -->
+  <meta name="robots" content="noindex, nofollow">
+
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+
+  <!-- ---------- not signed in ---------- -->
+  <section id="gate" class="hidden mid">
+    <div class="box">
+      <h1>PlotMyPub Admin</h1>
+      <p>You're not signed in on this device.</p>
+      <a class="btn" href="/">Sign in on the app</a>
+      <p class="foot">Sign in there, then come back to this page.</p>
+    </div>
+  </section>
+
+  <!-- ---------- signed in, but not an admin ---------- -->
+  <section id="denied" class="hidden mid">
+    <div class="box">
+      <h1>No admin access</h1>
+      <p><span id="deniedWho"></span> isn't an admin.</p>
+      <p class="foot">
+        Admin is a flag on your profile that the app itself cannot set — that's
+        the point of it. Grant the first one from the Supabase SQL editor:
+      </p>
+      <pre>update profiles
+   set is_admin = true
+ where display_name = 'Your Name';</pre>
+      <a class="btn ghost" href="/">Back to the map</a>
+    </div>
+  </section>
+
+  <!-- ---------- the console ---------- -->
+  <div id="console" class="hidden">
+    <header id="top">
+      <div class="brand">
+        <span class="mark">🍺</span>
+        <div>
+          <strong>PlotMyPub</strong>
+          <span class="sub">Admin console</span>
+        </div>
+      </div>
+      <nav id="tabs">
+        <button data-tab="overview">Overview</button>
+        <button data-tab="groups">Groups</button>
+        <button data-tab="activity">Activity</button>
+        <button data-tab="people">People</button>
+        <button data-tab="audit">Audit</button>
+      </nav>
+      <div class="who">
+        <span id="who"></span>
+        <button id="refresh" class="link">Refresh</button>
+        <button id="signout" class="link">Sign out</button>
+      </div>
+    </header>
+
+    <main id="panel"></main>
+  </div>
+
+  <div id="lightbox"></div>
+  <div id="toast" class="toast"></div>
+
+  <script type="module" src="/js/admin/admin.mjs"></script>
+</body>
+</html>

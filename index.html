@@ -123,6 +123,10 @@
         <div id="hasGroups" class="hidden">
           <label for="groupSel">Your group</label>
           <select id="groupSel"></select>
+          <!-- Shown once, right after creating a group: loadGroups() swaps this
+               panel in and hides the create form (and its message) with it, so
+               the generated invite word has to be repeated here or it's lost. -->
+          <p id="createdNote" class="msg good hidden"></p>
           <button id="openMap" class="primary">Open the map</button>
         </div>
 
@@ -140,10 +144,8 @@
             <label for="newName">New group name</label>
             <input id="newName" type="text" placeholder="The Regulars" autocomplete="off">
           </div>
-          <div class="row">
-            <label for="newCode">Pick an invite word</label>
-            <input id="newCode" type="text" placeholder="a word friends will remember" autocomplete="off">
-          </div>
+          <p class="lede">We'll generate the invite word for you — a made-up one
+            nobody can guess. You can share it from the map once you're in.</p>
           <button id="create" class="ghost">Create group</button>
           <div id="groupMsg" class="msg"></div>
         </div>
@@ -256,7 +258,6 @@
           <button id="mapCreateToggle" type="button" class="um-item">+ Create a group</button>
           <div id="mapCreateBox" class="hidden">
             <input id="mapNewName" type="text" placeholder="Group name" autocomplete="off">
-            <input id="mapNewCode" type="text" placeholder="Invite word" autocomplete="off">
             <button id="mapCreate" type="button" class="um-primary">Create group</button>
             <div id="mapGroupMsg" class="um-msg"></div>
           </div>

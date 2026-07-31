@@ -758,20 +758,26 @@ $('mapCreateToggle').addEventListener('click', function () {
   box.classList.toggle('hidden');
   if (opening) $('mapNewName').focus();
 });
+// The invite word is generated server-side now (create_group takes a name only),
+// so it can't be a short guessable one. That makes it something the user has to
+// be TOLD — hence the menu deliberately stays open on success, showing the code,
+// instead of closing straight into the map the way it used to.
 $('mapCreate').addEventListener('click', async function () {
-  var name = $('mapNewName').value.trim(), code = $('mapNewCode').value.trim();
-  if (!name || !code) { setMapMsg('Name the group and give it an invite word.', 'bad'); return; }
+  var name = $('mapNewName').value.trim();
+  if (!name) { setMapMsg('Name the group.', 'bad'); return; }
   $('mapCreate').disabled = true; setMapMsg('Creating…', '');
-  var res = await sb.rpc('create_group', { p_name: name, p_invite_code: code });
+  var res = await sb.rpc('create_group', { p_name: name });
   $('mapCreate').disabled = false;
   if (res.error) { setMapMsg(res.error.message, 'bad'); return; }
   await loadGroups();
-  var g = S.GROUPS.find(function (x) { return x.name === name; }) || S.GROUPS[S.GROUPS.length - 1];
+  var g = (res.data && S.GROUPS.find(function (x) { return x.id === res.data.id; }))
+    || S.GROUPS[S.GROUPS.length - 1];
   if (g) S.ACTIVE_GROUP = { id: g.id, name: g.name };
   rememberGroup();
-  $('mapNewName').value = ''; $('mapNewCode').value = '';
+  $('mapNewName').value = '';
   syncMapGroupBar();
-  closeUserMenu();
+  setMapMsg('Created. Invite word: ' + (res.data && res.data.invite_code) +
+            ' — use "Invite someone" above to share it.', 'good');
   renderPubs();
 });
 

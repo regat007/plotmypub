@@ -1,0 +1,226 @@
+/* PlotMyPub — admin console.
+   Shares the app's palette (slate / cream / the 0–10 heat ramp) so it reads as
+   the same product, but lays out for a desktop screen: sticky bar, dense tables,
+   tabular figures. Deliberately separate from styles.css — nothing here ships
+   to ordinary users. */
+
+:root{
+  --slate:#2F4F4F; --slate-d:#243c3c; --ink:#14213d;
+  --line:#e3e3e0; --muted:#6b7280; --bg:#f6f5f2; --card:#ffffff;
+  --bad:#b3261e; --good:#0F6E56; --warn:#8a5a00; --warn-bg:#fff6e0;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--ink);
+  font-size:14px; line-height:1.45;
+}
+.hidden{display:none !important}
+
+/* ---------------------------------------------------- gate / denied screens */
+.mid{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px}
+.box{
+  background:var(--card); border:1px solid var(--line); border-radius:12px;
+  padding:28px; max-width:480px; box-shadow:0 4px 24px rgba(0,0,0,.08);
+}
+.box h1{margin:0 0 10px; font-size:20px}
+.box p{margin:0 0 12px}
+.box pre{
+  background:#f3f3f1; border:1px solid var(--line); border-radius:8px;
+  padding:12px; font-size:12.5px; overflow-x:auto; margin:0 0 16px;
+}
+
+/* ---------------------------------------------------- top bar */
+#top{
+  position:sticky; top:0; z-index:10;
+  display:flex; align-items:center; gap:24px; flex-wrap:wrap;
+  padding:10px 20px; background:var(--slate); color:#fff;
+  box-shadow:0 1px 6px rgba(0,0,0,.18);
+}
+.brand{display:flex; align-items:center; gap:10px}
+.brand .mark{font-size:22px; line-height:1}
+.brand strong{display:block; font-size:15px; letter-spacing:.01em}
+.brand .sub{display:block; font-size:11px; opacity:.75}
+
+#tabs{display:flex; gap:2px; flex:1}
+#tabs button{
+  font:inherit; font-size:13.5px; cursor:pointer; color:#fff;
+  background:transparent; border:0; border-radius:7px; padding:8px 14px;
+}
+#tabs button:hover{background:rgba(255,255,255,.12)}
+#tabs button.active{background:#fff; color:var(--slate); font-weight:bold}
+
+.who{display:flex; align-items:center; gap:14px; font-size:12px; opacity:.9}
+.who .link{color:#fff}
+
+/* ---------------------------------------------------- content */
+#panel{padding:22px 20px 60px; max-width:1240px; margin:0 auto}
+
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:12px;
+  padding:18px 20px; margin:0 0 18px;
+}
+.card h2{
+  margin:0 0 14px; font-size:15px; letter-spacing:.01em;
+  display:flex; align-items:center; gap:8px;
+}
+.count{
+  font-size:11.5px; font-weight:normal; color:var(--muted);
+  background:#f3f3f1; border-radius:20px; padding:2px 9px;
+}
+.foot{margin:12px 0 0; font-size:12.5px; color:var(--muted); line-height:1.55}
+.warn-text{color:var(--warn)}
+.muted{color:var(--muted)}
+.strong{font-weight:bold}
+
+.loading,.empty{
+  padding:44px 20px; text-align:center; color:var(--muted);
+  background:var(--card); border:1px solid var(--line); border-radius:12px;
+}
+
+/* ---------------------------------------------------- warnings */
+/* Named .alert, not .warn: the small badges below use `class="flag warn"`, and
+   a bare .warn rule here would bleed its border, padding and margin onto every
+   one of them. */
+.alert{
+  background:var(--warn-bg); border:1px solid #f0dda6; border-left:4px solid #d69e2e;
+  border-radius:10px; padding:16px 20px; margin:0 0 18px;
+}
+.alert h3{margin:0 0 8px; font-size:14px; color:var(--warn)}
+.alert ul{margin:0; padding-left:20px}
+.alert li{margin:0 0 6px; line-height:1.55}
+
+/* ---------------------------------------------------- stat tiles */
+.tiles{
+  display:grid; gap:12px; margin:0 0 18px;
+  grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+}
+.tile{
+  background:var(--card); border:1px solid var(--line); border-radius:12px;
+  padding:16px 18px; display:flex; flex-direction:column; gap:2px;
+}
+.tile-n{font-size:28px; font-weight:bold; font-variant-numeric:tabular-nums; line-height:1.1}
+.tile-k{font-size:13px}
+.tile-s{font-size:11.5px; color:var(--muted); margin-top:4px}
+
+/* ---------------------------------------------------- sparkline */
+.spark{
+  display:flex; align-items:flex-end; gap:3px; height:90px;
+  padding:0 2px; border-bottom:1px solid var(--line);
+}
+.spark i{flex:1; background:var(--slate); border-radius:2px 2px 0 0; min-height:2px; opacity:.85}
+.spark i:hover{opacity:1; background:var(--good)}
+
+/* ---------------------------------------------------- tables */
+.scroll{overflow-x:auto; margin:0 -20px; padding:0 20px}
+table.grid{border-collapse:collapse; width:100%; font-size:13px}
+table.grid th{
+  text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+  color:var(--muted); font-weight:bold; padding:0 10px 8px; white-space:nowrap;
+  border-bottom:1px solid var(--line);
+}
+table.grid td{padding:9px 10px; border-bottom:1px solid #f0efec; vertical-align:top}
+table.grid tr:last-child td{border-bottom:0}
+table.grid th.n,table.grid td.n{text-align:right; font-variant-numeric:tabular-nums}
+table.grid tbody tr:hover{background:#faf9f6}
+table.grid td.detail{color:var(--muted); max-width:420px}
+table.grid code{
+  font-size:12px; background:#f3f3f1; border-radius:5px; padding:2px 6px;
+  word-break:break-all;
+}
+table.grid select{font:inherit; font-size:12.5px; padding:3px 6px; border:1px solid #ccc; border-radius:6px}
+table.grid input[type=checkbox]{width:16px; height:16px; cursor:pointer}
+
+/* clickable group rows */
+tr[data-gid]{cursor:pointer}
+
+/* ---------------------------------------------------- chips + flags */
+.chip{
+  display:inline-block; font-size:11px; background:#eef1f0; color:var(--slate);
+  border-radius:20px; padding:2px 9px; margin:0 4px 3px 0; white-space:nowrap;
+}
+/* Cells that pair a label with a badge. Inline layout aligned the two on their
+   baselines, which grew the line box and left flagged rows visibly taller than
+   unflagged ones; a flex row centres them and takes its height from the tallest
+   child, so every row matches. */
+.cell{display:flex; align-items:center; gap:6px; flex-wrap:wrap}
+
+.flag{
+  font-size:10px; text-transform:uppercase; letter-spacing:.04em;
+  background:var(--slate); color:#fff; border-radius:4px; padding:2px 5px;
+  line-height:1; white-space:nowrap;
+}
+.flag.warn{background:#d69e2e}
+.flag.bad{background:var(--bad)}
+.pill{
+  display:inline-block; min-width:38px; text-align:center; font-weight:bold;
+  font-size:12px; border-radius:20px; padding:2px 8px; color:#14213d;
+  font-variant-numeric:tabular-nums;
+}
+.pill.muted{background:#e3e3e0; color:var(--muted)}
+
+/* ---------------------------------------------------- feed */
+ul.feed{list-style:none; margin:0; padding:0}
+ul.feed li{padding:12px 0; border-bottom:1px solid #f0efec}
+ul.feed li:last-child{border-bottom:0}
+.feed-head{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.feed-head .when{margin-left:auto; font-size:12px; color:var(--muted); white-space:nowrap}
+.note{
+  margin:8px 0 0; padding:8px 12px; background:#faf9f6; border-left:3px solid var(--line);
+  border-radius:0 6px 6px 0; font-size:13px; color:#333;
+}
+.feed-acts{display:flex; gap:14px; margin-top:8px}
+
+/* ---------------------------------------------------- buttons */
+.btn{
+  font:inherit; font-size:13.5px; cursor:pointer; border:0; border-radius:7px;
+  padding:9px 15px; background:var(--slate); color:#fff; font-weight:bold;
+  text-decoration:none; display:inline-block;
+}
+.btn:hover{background:var(--slate-d)}
+.btn.ghost{background:#fff; border:1px solid #ccc; color:var(--ink); font-weight:normal}
+.btn.ghost:hover{background:#f3f3f1}
+.btn.wide{width:100%; margin-top:14px}
+
+.link{
+  font:inherit; font-size:13px; background:none; border:0; padding:0; cursor:pointer;
+  color:var(--slate); text-decoration:underline; text-underline-offset:2px;
+}
+.link:hover{color:var(--slate-d)}
+.link.danger{color:var(--bad)}
+.link.back{margin:0 0 14px; display:inline-block}
+
+:where(button,a,input,select):focus-visible{outline:2px solid var(--slate); outline-offset:2px}
+
+/* inline action rows (rename / rotate) */
+.actions{display:flex; align-items:flex-end; gap:10px; margin:14px 0 0; flex-wrap:wrap}
+.actions label{display:block; font-size:11px; color:var(--muted)}
+.actions input{
+  display:block; font:inherit; font-size:14px; padding:8px 10px; margin-top:4px;
+  border:1px solid #ccc; border-radius:7px; min-width:280px;
+}
+.actions input[readonly]{background:#f3f3f1; color:#444}
+
+/* ---------------------------------------------------- lightbox + toast */
+#lightbox{
+  display:none; position:fixed; inset:0; z-index:40; cursor:zoom-out;
+  background:rgba(0,0,0,.82); align-items:center; justify-content:center; padding:30px;
+}
+#lightbox.show{display:flex}
+#lightbox img{max-width:100%; max-height:100%; border-radius:8px}
+
+.toast{
+  position:fixed; left:50%; bottom:28px; transform:translate(-50%, 20px);
+  background:var(--ink); color:#fff; padding:11px 18px; border-radius:8px;
+  font-size:13.5px; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s;
+  z-index:50; max-width:min(90vw, 520px); box-shadow:0 6px 24px rgba(0,0,0,.25);
+}
+.toast.show{opacity:1; transform:translate(-50%, 0)}
+.toast.bad{background:var(--bad)}
+
+@media (max-width:720px){
+  #top{gap:12px}
+  #tabs{order:3; flex-basis:100%; overflow-x:auto}
+  .actions input{min-width:0; width:100%}
+}

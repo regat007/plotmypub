@@ -14,7 +14,7 @@
  * CACHE_VERSION is only needed to purge the old cache, not to avoid staleness.
  */
 
-const CACHE_VERSION = 'plotmypub-v17';
+const CACHE_VERSION = 'plotmypub-v18';
 
 const SHELL = [
   '/',
@@ -102,15 +102,24 @@ self.addEventListener('fetch', function (e) {
   // Navigations: network first, so a fresh deploy lands immediately;
   // fall back to the cached shell when offline.
   if (req.mode === 'navigate') {
+    // Only the app's own entry point may be stored as the offline shell. This
+    // site serves other top-level pages (/admin.html, /privacy.html) and caching
+    // one of THOSE under '/index.html' would hand every offline visitor the
+    // wrong page as the app.
+    const isAppShell = (url.pathname === '/' || url.pathname === '/index.html');
     e.respondWith(
       fetch(req, { cache: 'no-cache' })
         .then(function (res) {
-          const copy = res.clone();
-          caches.open(CACHE_VERSION).then(function (c) { c.put('/index.html', copy); });
+          if (isAppShell) {
+            const copy = res.clone();
+            caches.open(CACHE_VERSION).then(function (c) { c.put('/index.html', copy); });
+          }
           return res;
         })
         .catch(function () {
-          return caches.match('/index.html').then(function (hit) {
+          // Offline: the app falls back to its shell, other pages to their own
+          // cached copy if they happen to have one.
+          return caches.match(isAppShell ? '/index.html' : req).then(function (hit) {
             return hit || Response.error();
           });
         })
