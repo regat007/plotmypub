@@ -719,6 +719,9 @@ document.addEventListener('click', function () {
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && !$('userMenu').classList.contains('hidden')) closeUserMenu();
 });
+// The menu swallows clicks (above), so the policy link has to close it itself —
+// otherwise it's still hanging open behind the app when the user comes back.
+$('mapPrivacy').addEventListener('click', closeUserMenu);
 
 // share a link that joins the active group directly (the ?join= word)
 function setShareMsg(text, cls) {
