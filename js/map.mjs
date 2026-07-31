@@ -163,6 +163,11 @@ $('iwPhotoInput').addEventListener('change', function () {
       // reopen the pub so the new photo shows
       var again = PUBS.filter(function (p) { return p.pubId === t.pubId; })[0];
       if (again) focusPub(viewOf(again) || again);
+      // A photo added here is a rating EDIT, and edits earn too: the photo bonus,
+      // and Journalist if the review already had a note. Same follow-up as the
+      // add-a-pub form, or the badge would sit unseen until the next app open.
+      refreshMapXp();
+      checkForUnlocks();
     })
     .catch(function (e) { showError('Photo upload failed: ' + (e.message || e)); });
 });
