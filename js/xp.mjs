@@ -15,12 +15,17 @@ export const XP_VALUES = {
 };
 
 // Human-facing labels for the "recent XP" feed.
+// `adjust` has no entry in XP_VALUES and is never awarded by a trigger: it's a
+// manual correction row written straight into the ledger (see 0004_xp.sql — the
+// ledger is append-only, so the way to take points back is to add a negative
+// row, never to delete the ones already earned). Its amount can be negative.
 export const XP_LABELS = {
   rate_pub:   'Rated a pub',
   new_area:   'New area explored',
   first_map:  'First to map it',
   with_note:  'Wrote a note',
-  with_photo: 'Added a photo'
+  with_photo: 'Added a photo',
+  adjust:     'Levelling adjustment'
 };
 
 // The six tiers, keyed on cumulative XP. Hand-tuned thresholds (deliberately NOT

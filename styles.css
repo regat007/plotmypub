@@ -684,7 +684,7 @@
       background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
     }
     .social-view .lb-row {
-      display: flex; align-items: center; gap: 11px; padding: 10px 13px;
+      display: flex; align-items: center; gap: 9px; padding: 10px 13px;
       border-bottom: 1px solid #f2f2f0;
     }
     .social-view .lb-row:last-child { border-bottom: 0; }
@@ -702,7 +702,15 @@
     }
     .social-view .lb-tier { font-size: 11px; color: var(--muted); margin-top: 1px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .social-view .lb-row .pin-strip { margin-left: 2px; }
+    /* The leaderboard is where pinned badges are meant to be seen, so they run a
+       size up from the map pill's mini medal — big enough to read the emoji at a
+       glance. Scoped to .lb-row so the map pill keeps the quieter 24px. The row
+       gap above is tightened to buy back the width three of these cost. */
+    .social-view .lb-row .pin-strip { margin-left: 0; gap: 4px; }
+    .social-view .lb-row .ach-medal.mini { width: 32px; height: 32px; }
+    .social-view .lb-row .ach-medal.mini .ach-ring { width: 32px; height: 32px; padding: 3px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.28), inset 0 1px 1px rgba(255,255,255,.55), inset 0 -2px 3px rgba(0,0,0,.3); }
+    .social-view .lb-row .ach-medal.mini .ach-disc { font-size: 15px; }
     .social-view .lb-xp {
       flex: 0 0 auto; font-size: 14px; font-weight: bold; color: var(--slate);
       font-variant-numeric: tabular-nums;
@@ -1057,6 +1065,9 @@
       white-space: nowrap; font-variant-numeric: tabular-nums; }
     .lv-ev-amt { flex: 0 0 auto; font-weight: bold; color: var(--slate);
       font-variant-numeric: tabular-nums; font-size: 14px; }
+    /* a negative row (manual 'adjust'): muted rather than alarming red — it's a
+       correction, not a penalty */
+    .lv-ev-amt.is-neg { color: var(--muted); }
 
     /* empty state */
     .lv-empty { text-align: center; padding: 44px 20px 24px; }

@@ -557,14 +557,20 @@ var CAT_SHORT = {
 };
 
 // Older ratings fade so the freshest activity reads as "now" and the tail
-// recedes hard. Full strength under a day old, then an ease-in curve that keeps
-// recent items crisp before dropping off — nearly invisible by ~4 weeks.
+// recedes. Anything from the last 24 hours is at full strength; crossing that
+// line drops a row to AGED_TOP — a visible step, so "today" reads as a band
+// rather than a gradient — and from there it keeps receding to AGED_FLOOR at
+// ~4 weeks. Rows lift back to full on hover (.act:hover in styles.css).
+var AGED_TOP = 0.62;               // where a row lands the moment it's a day old
+var AGED_FLOOR = 0.16;             // four weeks and older; still just legible
 function ageOpacity(ms) {
   if (!ms) return 1;
   var days = (Date.now() - ms) / 86400000;
-  var floor = 0.06;
-  var t = Math.min(1, days / 28);   // 0 = now, 1 = four weeks old
-  return 1 - (t * t) * (1 - floor); // ease-in: gentle early, steep at the tail
+  if (days < 1) return 1;
+  var t = Math.min(1, (days - 1) / 27);   // 0 = a day old, 1 = four weeks old
+  // sqrt: steepest right after the step, so this week separates clearly, then
+  // the long tail flattens instead of all going equally invisible.
+  return AGED_TOP - (AGED_TOP - AGED_FLOOR) * Math.sqrt(t);
 }
 
 function catChips(cats) {

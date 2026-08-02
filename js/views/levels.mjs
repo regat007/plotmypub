@@ -232,13 +232,17 @@ function feedHtml(rows) {
       return '<span class="lv-pill" title="' + m.label + '" aria-label="' + m.label + '">' + m.icon + '</span>';
     }).join('');
     const time = timeAgo(r.at);
+    // A row can be negative (an 'adjust' correction), so the sign comes off the
+    // amount rather than a hardcoded '+'.
+    const neg = r.total < 0;
+    const amt = (neg ? '−' : '+') + fmt(Math.abs(r.total));
     return '<div class="lv-ev">' +
       '<div class="lv-ev-body">' +
         '<div class="lv-ev-title">' + escapeHtml(title) + '</div>' +
         (pills ? '<div class="lv-ev-pills">' + pills + '</div>' : '') +
         (time ? '<div class="lv-ev-time">' + escapeHtml(time) + '</div>' : '') +
       '</div>' +
-      '<div class="lv-ev-amt">+' + fmt(r.total) + '</div>' +
+      '<div class="lv-ev-amt' + (neg ? ' is-neg' : '') + '">' + amt + '</div>' +
     '</div>';
   }).join('');
 }
